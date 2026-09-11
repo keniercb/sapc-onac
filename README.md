@@ -3,14 +3,14 @@
 > **Proyecto:** Plataforma de gestión integral para la Oficina Nacional de Atención a Combatientes (ONAC), Cuba.
 > **Fecha:** 2026-09-11
 > **Audiencia:** Project Manager + Arquitecto de Software
-> **Stack objetivo:** Node.js 26.2.8 LTS + Next.js 14 + NestJS + PostgreSQL + Prisma + Turborepo, despliegue on-premise.
+> **Stack objetivo:** Node.js 26.8.2 LTS + Next.js 14 + NestJS + PostgreSQL + Prisma + Turborepo, despliegue on-premise.
 
 ## Entregables
 
 | # | Archivo | Descripción |
 |---|---|---|
 | 1 | [`01-requisitos-funcionales.md`](./01-requisitos-funcionales.md) | 42 requisitos funcionales en 10 módulos (Autenticación, Pensionados, Nomencladores, Citas, Salud, Necesidades, Fallecimiento, Reportes, Auditoría, Notificaciones, UI). Incluye criterios de aceptación, RNF, matriz de trazabilidad y priorización para roadmap. |
-| 2 | [`02-plan-desarrollo.md`](./02-plan-desarrollo.md) | Plan en 5 fases (~37 semanas). Stack detallado (Node.js 26.2.8 LTS + Next.js 14 + NestJS + PostgreSQL + Prisma + Turborepo). Estructura del monorepo, arquitectura frontend (Sidebar por rol + Topbar + CRUD genérico + toasts con Sonner), CI/CD, riesgos, topología on-premise Cuba. |
+| 2 | [`02-plan-desarrollo.md`](./02-plan-desarrollo.md) | Plan en 5 fases (~37 semanas). Stack detallado (Node.js 26.8.2 LTS + Next.js 14 + NestJS + PostgreSQL + Prisma + Turborepo). Estructura del monorepo, arquitectura frontend (Sidebar por rol + Topbar + CRUD genérico + toasts con Sonner), CI/CD, riesgos, topología on-premise Cuba. |
 | 3 | [`03-modelos-datos.md`](./03-modelos-datos.md) | 30 entidades modeladas en 7 dominios: Identidad, Trayectoria/Pensión, Nomencladores, Atención, Salud/Fallecimiento, Seguridad/Auditoría, Notificaciones. Atributos tipados, relaciones, índices, estrategias de auditoría, versionado de nomencladores, cifrado de datos sensibles. Incluye esquema Prisma de ejemplo. |
 | 4 | [`diagrama-er.png`](./diagrama-er.png) | Diagrama entidad-relación visual con las 30 entidades y sus relaciones principales. |
 
@@ -27,7 +27,7 @@
 
 ## Stack Tecnológico
 
-- **Runtime:** Node.js 26.2.8 LTS (pin estricto)
+- **Runtime:** Node.js 26.8.2 LTS (pin estricto)
 - **Frontend:** Next.js 14 (App Router) + React 18 + TypeScript 5 + Tailwind CSS 3.4 + shadcn/ui + TanStack Query + Zustand + TanStack Table + Sonner (toasts)
 - **Backend:** NestJS 10 + TypeScript 5 + Prisma 5 + class-validator + Passport + JWT + bcrypt + Pino + BullMQ + Redis
 - **Base de datos:** PostgreSQL 16
