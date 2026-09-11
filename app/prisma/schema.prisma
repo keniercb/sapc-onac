@@ -1,0 +1,432 @@
+// SAPC-ONAC — Schema Prisma (Fase 0 MVP, SQLite para desarrollo local)
+// En producción se migrará a PostgreSQL 16 con los mismos modelos.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Seguridad =====
+
+model Usuario {
+  id                     String   @id @default(cuid())
+  carnetIdentidad        String   @unique
+  nombres                String
+  apellidos              String
+  nombreUsuario          String   @unique
+  email                  String?
+  passwordHash           String
+  preguntaSeguridad      String?
+  respuestaSeguridadHash String?
+  territorioId           String?
+  intentosLoginFallidos  Int      @default(0)
+  bloqueadoHasta         DateTime?
+  ultimoLogin            DateTime?
+  estado                 String   @default("ACTIVO") // ACTIVO, INACTIVO, BLOQUEADO, SUSPENDIDO
+  fechaCreacion          DateTime @default(now())
+  fechaDesactivacion     DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  deletedAt              DateTime?
+  territorio             Provincia? @relation(fields: [territorioId], references: [id])
+
+  rolAsignaciones  UsuarioRol[]
+  sesiones          Sesion[]
+  auditorias        Auditoria[]
+  notificacionesRecibidas NotificacionDestinatario[]
+  notificacionesEmitidas NotificacionDestinatario[] @relation("notificacion_emisor")
+  historialPasswords HistorialPassword[]
+  pensionadosCreados   Pensionado[] @relation("pensionado_created_by")
+  pensionadosModificados Pensionado[] @relation("pensionado_updated_by")
+
+  @@map("usuarios")
+}
+
+model Rol {
+  id          String   @id @default(cuid())
+  codigo      String   @unique // OPERARIO, ESP_NOMENCLADORES, SUPERVISOR_TERRITORIAL, DIRECCION_NACIONAL, ADMINISTRADOR, AUDITOR
+  nombre      String
+  descripcion String?
+  esSistema   Boolean  @default(false)
+  estado      String   @default("ACTIVO")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  permisos       RolPermiso[]
+  usuarios       UsuarioRol[]
+  notificaciones NotificacionDestinatario[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          String   @id @default(cuid())
+  codigo      String   @unique // p. ej. pensionados:read
+  nombre      String
+  modulo      String
+  descripcion String?
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  roles RolPermiso[]
+
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     String
+  permisoId String
+  createdAt DateTime @default(now())
+  rol        Rol      @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso    Permiso  @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("rol_permisos")
+}
+
+model UsuarioRol {
+  usuarioId      String
+  rolId          String
+  fechaInicio    DateTime @default(now())
+  fechaFin       DateTime?
+  esDelegacion   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  usuario        Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol            Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, rolId])
+  @@map("usuario_roles")
+}
+
+model Sesion {
+  id               String   @id @default(cuid())
+  usuarioId        String
+  tokenId          String   @unique
+  fechaInicio      DateTime @default(now())
+  fechaFin         DateTime?
+  duracionSegundos Int?
+  ipOrigen         String
+  userAgent        String?
+  estado           String   @default("ACTIVA") // ACTIVA, CERRADA, EXPIRADA, REVOCADA
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("sesiones")
+}
+
+model HistorialPassword {
+  id           String   @id @default(cuid())
+  usuarioId    String
+  passwordHash String
+  fechaCambio  DateTime @default(now())
+  changedById  String
+  createdAt    DateTime @default(now())
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, fechaCambio])
+  @@map("historial_passwords")
+}
+
+// ===== Nomencladores =====
+
+model Nomenclador {
+  id              String   @id @default(cuid())
+  codigo          String   @unique // sexo, color_piel, categoria, frente_er, etc.
+  nombre          String
+  descripcion     String?
+  esGeografico    Boolean  @default(false)
+  esCargableExcel Boolean  @default(true)
+  estado          String   @default("ACTIVO")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+  valores         NomencladorValor[]
+
+  @@map("nomencladores")
+}
+
+model NomencladorValor {
+  id                    String   @id @default(cuid())
+  nomencladorId         String
+  codigo                String
+  descripcion           String
+  descripcionExtendida  String?
+  ordenVisualizacion    Int      @default(0)
+  vigenteDesde          DateTime @default(now())
+  vigenteHasta          DateTime?
+  estado                String   @default("ACTIVO") // ACTIVO, INACTIVO, OBSOLETO
+  metadata              String? // JSON string en SQLite
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  deletedAt             DateTime?
+  nomenclador           Nomenclador @relation(fields: [nomencladorId], references: [id], onDelete: Cascade)
+
+  @@unique([nomencladorId, codigo])
+  @@index([nomencladorId, estado, ordenVisualizacion])
+  @@map("nomencladores_valores")
+}
+
+// ===== Geográfico =====
+
+model Provincia {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  nombre    String
+  orden     Int      @default(0)
+  estado    String   @default("ACTIVO")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  municipios Municipio[]
+  pensionadosTerritorio Pensionado[]
+  usuariosTerritorio Usuario[]
+
+  @@map("provincias")
+}
+
+model Municipio {
+  id          String   @id @default(cuid())
+  provinciaId String
+  codigo      String
+  nombre      String
+  orden       Int      @default(0)
+  estado      String   @default("ACTIVO")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  provincia   Provincia @relation(fields: [provinciaId], references: [id], onDelete: Cascade)
+
+  @@unique([provinciaId, codigo])
+  @@map("municipios")
+}
+
+// ===== Pensionados =====
+
+model Pensionado {
+  id                  String   @id @default(cuid())
+  carnetIdentidad    String   @unique
+  numeroSerieCertifico String?
+  nombres            String
+  primerApellido     String
+  segundoApellido    String?
+  conocidoPor        String?
+  sexoId             String? // FK lógica a NomencladorValor
+  colorPielId        String?
+  estadoCivilId      String?
+  estadoSaludId      String?
+  telefono           String?
+  fechaNacimiento    DateTime?
+  estado             String   @default("ACTIVO") // ACTIVO, INACTIVO, FALLECIDO, SUSPENDIDO
+  tipoBaja           String   @default("NINGUNA")
+  categoriaId        String? // FK lógica a NomencladorValor
+  territorioId       String?
+  esCaido            Boolean  @default(false)
+  observaciones      String?
+  metadata           String? // JSON string
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  createdBy          String
+  updatedBy          String
+  deletedAt          DateTime?
+  version            Int      @default(1)
+  territorio         Provincia? @relation(fields: [territorioId], references: [id])
+  creadoPor          Usuario  @relation("pensionado_created_by", fields: [createdBy], references: [id])
+  modificadoPor      Usuario  @relation("pensionado_updated_by", fields: [updatedBy], references: [id])
+  domicilios         Domicilio[]
+  cuentasBancarias   CuentaBancaria[]
+  pensiones          Pension[]
+  trayectoria        TrayectoriaRevolucionaria?
+  altasBajas         AltasBaja[]
+
+  @@index([categoriaId, estado])
+  @@index([territorioId, estado])
+  @@map("pensionados")
+}
+
+model Domicilio {
+  id                String   @id @default(cuid())
+  pensionadoId     String
+  provinciaId      String
+  municipioId      String
+  calle            String
+  numero           String?
+  entreCalle1      String?
+  entreCalle2     String?
+  edificio         String?
+  apartamento      String?
+  piso             String?
+  referenciaGeografica String?
+  latitud          Float?
+  longitud         Float?
+  telefono         String?
+  tipoDomicilio    String   @default("HABITUAL") // HABITUAL, PROVISIONAL, CORRESPONDENCIA
+  esPrincipal      Boolean  @default(false)
+  fechaInicio      DateTime @default(now())
+  fechaFin         DateTime?
+  observaciones    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+  pensionado       Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+
+  @@map("domicilios")
+}
+
+model CuentaBancaria {
+  id                  String   @id @default(cuid())
+  pensionadoId       String
+  banco              String
+  sucursal           String?
+  numeroCuenta        String
+  numeroControlBancario String?
+  tipoCuenta          String   @default("AHORRO") // AHORRO, CORRIENTE, OTRO
+  esActiva            Boolean  @default(true)
+  fechaApertura       DateTime?
+  fechaCierre         DateTime?
+  observaciones      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+  pensionado          Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+
+  @@map("cuentas_bancarias")
+}
+
+model Pension {
+  id                  String   @id @default(cuid())
+  pensionadoId       String
+  tipoPensionId      String // FK lógica a NomencladorValor
+  otorgadaPorId      String // FK lógica a NomencladorValor
+  cuantiaPmt         Float
+  montoSeguridadSocial Float?
+  asociadoAId        String? // FK lógica a NomencladorValor
+  fechaOtorgamiento  DateTime
+  fechaInicio        DateTime
+  fechaFin           DateTime?
+  numeroResolucion   String?
+  esVigente          Boolean  @default(true)
+  observaciones      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt           DateTime?
+  pensionado          Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+
+  @@map("pensiones")
+}
+
+model TrayectoriaRevolucionaria {
+  id                  String   @id @default(cuid())
+  pensionadoId       String   @unique
+  frenteErId         String? // FK lógica a NomencladorValor
+  columnaNumero      String?
+  columnaDenominacionId String? // FK lógica a NomencladorValor
+  numeroAcuerdoResolucion String?
+  fechaResolucion    DateTime?
+  gradoMilitarErId   String?
+  gradoMilitarFarMinintId String?
+  celulaId           String?
+  aep                 String?
+  gestas              String? // JSON array de FKs
+  observaciones      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt           DateTime?
+  pensionado          Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+
+  @@map("trayectorias_revolucionarias")
+}
+
+model AltasBaja {
+  id                  String   @id @default(cuid())
+  pensionadoId       String
+  tipoMovimiento     String // ALTA, BAJA
+  subtipo            String // INICIAL, REINCORPORACION, TRANSFERENCIA, VOLUNTARIA, FALLECIMIENTO, etc.
+  causaId             String? // FK lógica a NomencladorValor
+  fechaMovimiento    DateTime
+  fechaReincorporacionSma DateTime?
+  documentoRespaldatorio String?
+  observaciones      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt           DateTime?
+  pensionado          Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+
+  @@index([pensionadoId, fechaMovimiento])
+  @@map("altas_bajas")
+}
+
+// ===== Notificaciones =====
+
+model Notificacion {
+  id                  String   @id @default(cuid())
+  tipo                String // DERIVACION_VENCIDA, CITA_PROXIMA, NECESIDAD_ASIGNADA, etc.
+  titulo              String
+  descripcion        String
+  prioridad           String   @default("MEDIA") // ALTA, MEDIA, BAJA
+  entidadRelacionada  String?
+  entidadRelacionadaId String?
+  urlDestino          String?
+  payload             String? // JSON
+  generadaPor         String   @default("SISTEMA") // SISTEMA, USUARIO
+  usuarioEmisorId     String?
+  fechaCreacion       DateTime @default(now())
+  fechaExpiracion     DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+  destinatarios       NotificacionDestinatario[]
+
+  @@index([fechaCreacion])
+  @@map("notificaciones")
+}
+
+model NotificacionDestinatario {
+  id                    String   @id @default(cuid())
+  notificacionId        String
+  tipoDestinatario      String // USUARIO, ROL
+  usuarioDestinatarioId String?
+  rolDestinatarioId     String?
+  usuarioEmisorId       String?
+  estado                String   @default("PENDIENTE") // PENDIENTE, LEIDA, ARCHIVADA
+  fechaLectura          DateTime?
+  fechaArchivado        DateTime?
+  fechaEntregaSse       DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  notificacion          Notificacion @relation(fields: [notificacionId], references: [id], onDelete: Cascade)
+  usuarioDestinatario   Usuario? @relation(fields: [usuarioDestinatarioId], references: [id])
+  usuarioEmisor         Usuario? @relation("notificacion_emisor", fields: [usuarioEmisorId], references: [id])
+  rol                   Rol?     @relation(fields: [rolDestinatarioId], references: [id])
+
+  @@index([usuarioDestinatarioId, estado])
+  @@map("notificaciones_destinatarios")
+}
+
+// ===== Auditoría =====
+
+model Auditoria {
+  id              String   @id @default(cuid())
+  usuarioId       String?
+  fechaHora       DateTime @default(now())
+  ipOrigen        String?
+  modulo          String
+  entidad         String
+  entidadId       String?
+  accion          String // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, IMPORT, APPROVE, REJECT
+  valorAnterior   String? // JSON
+  valorNuevo      String? // JSON
+  detalleCambio   String? // JSON
+  metadata        String? // JSON
+  createdAt       DateTime @default(now())
+  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, fechaHora])
+  @@index([entidad, entidadId])
+  @@map("auditoria")
+}
