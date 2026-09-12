@@ -1,12 +1,15 @@
-// SAPC-ONAC — Schema Prisma (Fase 0 MVP, SQLite para desarrollo local)
-// En producción se migrará a PostgreSQL 16 con los mismos modelos.
+// SAPC-ONAC — Schema Prisma (Fase 1 MVP)
+//
+// Provider: PostgreSQL 16 (dev con docker-compose.dev.yml y prod)
+// Para desarrollo local sin Docker (sandbox): usar `schema.sqlite.prisma`
+// (ver scripts/switch-db-sqlite.sh)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

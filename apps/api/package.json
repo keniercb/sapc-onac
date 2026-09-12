@@ -1,11 +1,12 @@
 {
   "name": "@sapc/api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "start": "bun src/index.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.6.0",
@@ -18,7 +19,10 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^22.0.0",
     "prisma": "^6.11.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   }
 }
+

@@ -8,7 +8,9 @@
 ## Estado del Proyecto
 
 ✅ **Fase 0 completada:** MVP funcional con login, sidebar, CRUD pensionados, nomencladores
-✅ **Fase 1 completada (en sandbox):** Backend desacoplado con Hono (NestJS-style), frontend con cliente HTTP centralizado
+✅ **Fase 1 (sandbox) completada:** Backend desacoplado con Hono (NestJS-style), frontend con cliente HTTP centralizado
+✅ **Fase 1 — MVP Operativo:** Módulo Citas, ficha detallada del pensionado, exportación CSV
+✅ **Infraestructura dev/prod:** docker-compose.dev.yml mirror del prod, Makefile, switch SQLite/PostgreSQL, hot reload con pnpm
 
 ## Arquitectura del Monorepo
 
@@ -75,32 +77,83 @@ sapc-onac/
 
 ## Cómo Ejecutar
 
-### En el sandbox (desarrollo)
-```bash
-# Frontend Next.js (puerto 3000)
-cd apps/web
-bun install
-bun run db:push        # crea DB SQLite local
-bun prisma/seed.ts     # carga nomencladores + datos demo
-bun run dev
+### Requisitos previos
 
-# Backend API (puerto 4000, en otra terminal)
-cd apps/api
-bun install
-bun src/index.ts
-```
+- **Node.js 26.8.2 LTS** (pin estricto — ver `.nvmrc`)
+- **pnpm 9.15.0** (habilitar con `corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+- **Docker 24+** con Docker Compose v2 (para dev y prod con Docker)
+- **Bun 1.3+** (para ejecutar el backend Hono — `curl -fsSL https://bun.sh/install | bash`)
 
-### En producción (Docker on-premise)
+### Opción A — Desarrollo con Docker (recomendado, mirror de prod)
+
+Stack idéntico a prod (PostgreSQL 16 + Redis 7 + API + Web) pero con hot reload.
+
 ```bash
-# Configurar variables de entorno
+# 1. Setup inicial
 cp .env.example .env
-# Editar .env con POSTGRES_PASSWORD y JWT_SECRET
+# Editar .env: ajustar POSTGRES_PASSWORD y JWT_SECRET
+pnpm install
 
-# Levantar todo el stack
-docker compose -f infra/docker/docker-compose.yml up -d
+# 2. Levantar el stack completo
+make dev-up
+# → postgres (5432), redis (6379), api (4000), web (3000)
+
+# 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
+pnpm db:push
+pnpm db:seed
+
+# 4. Acceder
+# Web:  http://localhost:3000
+# API:  http://localhost:4000/health
 ```
 
-### Credenciales demo (Fase 0)
+Comandos útiles:
+```bash
+make dev-logs        # seguir logs de api + web
+make dev-down        # detener
+make dev-psql        # abrir psql en postgres de dev
+make dev-reset-db    # resetear BD y reseed
+make dev-debug       # levantar con pgadmin en :5050
+make help            # ver todos los comandos
+```
+
+### Opción B — Desarrollo local sin Docker (sandbox)
+
+Si Docker no está disponible, usar SQLite con el script de switch:
+
+```bash
+# 1. Cambiar schema Prisma a SQLite
+./scripts/switch-db.sh sqlite
+cp .env.sqlite.example .env
+
+# 2. Instalar y preparar
+pnpm install
+pnpm db:push
+pnpm db:seed
+
+# 3. Levantar en 2 terminales
+pnpm dev:api    # backend en :4000
+pnpm dev:web    # frontend en :3000
+```
+
+### Opción C — Producción on-premise (Docker)
+
+```bash
+# 1. Configurar variables de entorno de producción
+cp .env.example .env.production
+# Editar .env.production:
+#   POSTGRES_PASSWORD=$(openssl rand -hex 32)
+#   JWT_SECRET=$(openssl rand -hex 32)
+#   NEXT_PUBLIC_API_URL=https://api.onac.cu
+
+# 2. Construir imágenes y levantar
+make prod-build
+make prod-up
+```
+
+Ver [`infra/docker/README.md`](./infra/docker/README.md) para detalles completos de despliegue, healthchecks, backups y troubleshooting.
+
+### Credenciales demo
 - **Usuario:** `admin`
 - **Contraseña:** `admin123`
 
@@ -179,6 +232,29 @@ export const api = {
 ✅ Cambio de contraseña con política de complejidad
 ✅ Burbuja de notificaciones con polling 30s
 ✅ Auditoría automática de login/logout/CRUD
+✅ Módulo de Citas y Atenciones (RF-CIT-01, 02)
+✅ Ficha detallada del pensionado con drawer lateral (RF-PEN-02)
+✅ Exportación CSV de pensionados (RF-REP-02)
+
+## Equivalencia Dev vs Prod
+
+El entorno de desarrollo (`docker-compose.dev.yml`) es un **mirror fiel** del entorno de producción (`docker-compose.yml`), con las únicas diferencias necesarias para productividad:
+
+| Aspecto | Dev | Prod |
+|---|---|---|
+| **PostgreSQL** | 16-bookworm ✅ | 16-bookworm ✅ |
+| **Redis** | 7-alpine ✅ | 7-alpine ✅ |
+| **BD nombre** | sapc_onac_dev | sapc_onac |
+| **API runtime** | Bun con `--hot` (hot reload) | Bun (sin hot reload) |
+| **Web runtime** | Next.js turbopack | Next.js standalone build |
+| **Código fuente** | Bind-mount (cambios en vivo) | Copia al build (inmutable) |
+| **Volúmenes datos** | postgres_dev_data, redis_dev_data | postgres_data, redis_data |
+| **pgAdmin** | Disponible (`--profile debug`, :5050) | No incluido |
+| **Healthchecks** | Mismo | Mismo |
+| **Variables env** | `.env` (POSTGRES_PASSWORD=sapc_dev_pwd) | `.env.production` (POSTGRES_PASSWORD=random) |
+| **Restart policy** | unless-stopped | unless-stopped |
+
+Esto garantiza que lo que funciona en dev funcionará en prod sin sorpresas. Para detalles ver [`infra/docker/README.md`](./infra/docker/README.md).
 
 ## Próximos Pasos (Fase 2)
 

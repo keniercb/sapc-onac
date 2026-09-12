@@ -4,21 +4,32 @@
   "private": true,
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @sapc/web dev",
+    "dev:api": "pnpm --filter @sapc/api dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:push": "pnpm --filter @sapc/web db:push",
     "db:seed": "pnpm --filter @sapc/web db:seed",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "db:studio": "pnpm --filter @sapc/web exec prisma studio",
+    "db:migrate": "pnpm --filter @sapc/web exec prisma migrate dev",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "clean": "turbo run clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
+    "docker:dev:up": "docker compose -f infra/docker/docker-compose.dev.yml --env-file .env up -d",
+    "docker:dev:down": "docker compose -f infra/docker/docker-compose.dev.yml --env-file .env down",
+    "docker:dev:logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f api web",
+    "docker:prod:build": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production build",
+    "docker:prod:up": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production up -d",
+    "docker:prod:down": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production down"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": "26.8.2",
-    "pnpm": "9.0.0"
+    "pnpm": "9.15.0"
   }
 }

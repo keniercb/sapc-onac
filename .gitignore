@@ -14,7 +14,11 @@ build/
 # Environment
 .env
 .env.local
+.env.production
 .env.*.local
+# Excepciones: ejemplos sí se commitean
+!.env.example
+!.env.sqlite.example
 
 # Database (SQLite local para desarrollo)
 *.db

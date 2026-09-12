@@ -1,0 +1,37 @@
+# SAPC-ONAC API — Dockerfile de DESARROLLO
+# Imagen Node.js 26.8.2 con pnpm 9 para hot reload.
+# No compila, solo deja el código listo para `pnpm dev` (bun --hot src/index.ts).
+#
+# En producción: usar docker/api.Dockerfile (multi-stage con Bun).
+
+FROM node:26.8.2-bookworm-slim
+
+# Instalar bun runtime (para ejecutar la API Hono) y herramientas básicas
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl ca-certificates git \
+      libssl-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://bun.sh/install | bash
+
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+
+# Habilitar pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+WORKDIR /app
+
+# El código se monta via bind-mount en docker-compose.dev.yml
+# Aquí solo pre-cargamos package.jsons para cache de instalación
+COPY apps/api/package.json ./apps/api/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./ 
+
+# Instalar dependencias raíz + paquetes
+# (se re-ejecuta en runtime con --frozen-lockfile si existe pnpm-lock.yaml)
+RUN pnpm install --no-frozen-lockfile || true
+
+EXPOSE 4000
+
+# El command real lo define docker-compose.dev.yml (pnpm dev)
+CMD ["echo", "Use docker compose -f infra/docker/docker-compose.dev.yml up api"]
