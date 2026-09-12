@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api/client'
 import {
-  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight,
+  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight, Download, Eye, X,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth/auth-context'
 
@@ -49,6 +49,13 @@ export type CrudConfig<T> = {
     delete: string
   }
   defaultSort?: { field: string; direction: 'asc' | 'desc' }
+  // Exportación CSV/Excel: si se define, se mostrará el botón Exportar
+  exportable?: {
+    csvEndpoint?: string // p. ej. '/reportes/pensionados.csv' (relativo a /backend)
+    permiso?: string
+  }
+  // Vista de detalle: función opcional para abrir un drawer
+  renderDetail?: (row: T) => React.ReactNode
 }
 
 export function CrudPage<T extends { id: string }>({ config }: { config: CrudConfig<T> }) {
@@ -63,10 +70,14 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(config.defaultSort?.direction || 'desc')
   const [editing, setEditing] = useState<T | null>(null)
   const [creating, setCreating] = useState(false)
+  const [detailRow, setDetailRow] = useState<T | null>(null)
 
   const canCreate = hasPermission(config.permissions.create)
   const canUpdate = hasPermission(config.permissions.update)
   const canDelete = hasPermission(config.permissions.delete)
+  const canExport = config.exportable?.permiso
+    ? hasPermission(config.exportable.permiso)
+    : false
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -134,6 +145,31 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
     }
   }
 
+  const handleExportCSV = async () => {
+    if (!config.exportable?.csvEndpoint) return
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      const url = `${API_BASE}/backend${config.exportable.csvEndpoint}?${params.toString()}`
+      // Fetch con cookies
+      const res = await fetch(url, { credentials: 'include' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `${config.resource}_${new Date().toISOString().slice(0,10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(downloadUrl)
+      toast.success('Exportación completada')
+    } catch (e: any) {
+      toast.error('Error al exportar', { description: e.message })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -147,6 +183,12 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
           <Button variant="outline" size="icon" onClick={fetchData} title="Recargar">
             <RefreshCw className="h-4 w-4" />
           </Button>
+          {canExport && config.exportable?.csvEndpoint && (
+            <Button variant="outline" onClick={handleExportCSV} title="Exportar a CSV">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
+          )}
           {canCreate && (
             <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
@@ -184,7 +226,7 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
                   </div>
                 </TableHead>
               ))}
-              {(canUpdate || canDelete) && (
+              {(canUpdate || canDelete || config.renderDetail) && (
                 <TableHead className="text-right">Acciones</TableHead>
               )}
             </TableRow>
@@ -196,7 +238,7 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
                   {config.columns.map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
-                  {(canUpdate || canDelete) && <TableCell><Skeleton className="h-5 w-20" /></TableCell>}
+                  {(canUpdate || canDelete || config.renderDetail) && <TableCell><Skeleton className="h-5 w-20" /></TableCell>}
                 </TableRow>
               ))
             ) : data.length === 0 ? (
@@ -213,9 +255,14 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
                       {col.render ? col.render(row) : String((row as any)[col.key] ?? '—')}
                     </TableCell>
                   ))}
-                  {(canUpdate || canDelete) && (
+                  {(canUpdate || canDelete || config.renderDetail) && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {config.renderDetail && (
+                          <Button variant="ghost" size="icon" onClick={() => setDetailRow(row)} title="Ver detalle">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canUpdate && (
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(row)} title="Editar">
                             <Pencil className="h-4 w-4" />
@@ -272,6 +319,35 @@ export function CrudPage<T extends { id: string }>({ config }: { config: CrudCon
           }}
         />
       )}
+
+      {detailRow && config.renderDetail && (
+        <DetailDrawer
+          title={`${config.resourceLabel} — Detalle`}
+          onClose={() => setDetailRow(null)}
+        >
+          {config.renderDetail(detailRow)}
+        </DetailDrawer>
+      )}
+    </div>
+  )
+}
+
+// Drawer reutilizable para mostrar detalle
+function DetailDrawer({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative w-full max-w-2xl overflow-y-auto bg-white shadow-xl">
+        <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
     </div>
   )
 }

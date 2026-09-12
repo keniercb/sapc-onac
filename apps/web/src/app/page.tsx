@@ -7,9 +7,10 @@ import { Dashboard } from '@/components/Dashboard'
 import { LoginScreen } from '@/components/LoginScreen'
 import { PensionadosView } from '@/components/views/PensionadosView'
 import { NomencladoresView } from '@/components/views/NomencladoresView'
+import { CitasView } from '@/components/views/CitasView'
 import { Skeleton } from '@/components/ui/skeleton'
 
-type View = 'dashboard' | 'pensionados' | 'nomencladores'
+type View = 'dashboard' | 'pensionados' | 'nomencladores' | 'citas'
 
 export default function HomePage() {
   const { user, loading } = useAuth()
@@ -18,10 +19,10 @@ export default function HomePage() {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail
-      // Mapear href → view id interno
       if (detail === '/') setView('dashboard')
       else if (detail.startsWith('/pensionados')) setView('pensionados')
       else if (detail.startsWith('/nomencladores')) setView('nomencladores')
+      else if (detail.startsWith('/citas')) setView('citas')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
     window.addEventListener('sapc-navigate', handler as EventListener)
@@ -44,11 +45,11 @@ export default function HomePage() {
     return <LoginScreen />
   }
 
-  // Map view → href (para highlight del Sidebar)
   const currentHref =
     view === 'dashboard' ? '/'
     : view === 'pensionados' ? '/pensionados'
     : view === 'nomencladores' ? '/nomencladores'
+    : view === 'citas' ? '/citas'
     : '/'
 
   return (
@@ -56,6 +57,7 @@ export default function HomePage() {
       {view === 'dashboard' && <Dashboard />}
       {view === 'pensionados' && <PensionadosView />}
       {view === 'nomencladores' && <NomencladoresView />}
+      {view === 'citas' && <CitasView />}
     </AppShell>
   )
 }

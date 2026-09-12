@@ -69,7 +69,7 @@ export const pensionadosService = {
       where: { id, deletedAt: null },
       include: {
         territorio: true,
-        domicilios: { where: { deletedAt: null }, include: { provincia: true, municipio: true } },
+        domicilios: { where: { deletedAt: null } },
         cuentasBancarias: { where: { deletedAt: null } },
         pensiones: { where: { deletedAt: null } },
         trayectoria: true,

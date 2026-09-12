@@ -18,11 +18,11 @@ export function Sidebar({ collapsed = false, currentView = '/', onNavigate }: Pr
 
   const visibleItems = MENU.filter(item => !item.permiso || user?.permisos.includes(item.permiso))
 
-  // Mapear href → view id interno
   const hrefToView = (href: string): string => {
     if (href === '/') return 'dashboard'
     if (href.startsWith('/pensionados')) return 'pensionados'
     if (href.startsWith('/nomencladores')) return 'nomencladores'
+    if (href.startsWith('/citas')) return 'citas'
     return href
   }
 

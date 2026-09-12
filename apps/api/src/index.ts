@@ -15,6 +15,8 @@ import { pensionadosModule } from './modules/pensionados/pensionados.module'
 import { nomencladoresModule } from './modules/nomencladores/nomencladores.module'
 import { notificacionesModule } from './modules/notificaciones/notificaciones.module'
 import { usuariosModule } from './modules/usuarios/usuarios.module'
+import { citasModule } from './modules/citas/citas.module'
+import { reportesModule } from './modules/reportes/reportes.module'
 import { errorHandler } from './common/middleware/error-handler'
 import { authMiddleware } from './common/middleware/auth-middleware'
 
@@ -44,6 +46,8 @@ protectedApp.route('/backend/pensionados', pensionadosModule.routes)
 protectedApp.route('/backend/nomencladores', nomencladoresModule.routes)
 protectedApp.route('/backend/notificaciones', notificacionesModule.routes)
 protectedApp.route('/backend/usuarios', usuariosModule.routes)
+protectedApp.route('/backend/citas', citasModule.routes)
+protectedApp.route('/backend/reportes', reportesModule.routes)
 
 app.route('/', protectedApp)
 

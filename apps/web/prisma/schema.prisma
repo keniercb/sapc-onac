@@ -42,6 +42,9 @@ model Usuario {
   historialPasswords HistorialPassword[]
   pensionadosCreados   Pensionado[] @relation("pensionado_created_by")
   pensionadosModificados Pensionado[] @relation("pensionado_updated_by")
+  citasAsignadas       Cita[]
+  atencionesRealizadas Atencion[]
+  atencionesDerivadas  Derivacion[] @relation("derivacion_funcionario_destino")
 
   @@map("usuarios")
 }
@@ -186,6 +189,7 @@ model Provincia {
   municipios Municipio[]
   pensionadosTerritorio Pensionado[]
   usuariosTerritorio Usuario[]
+  citas Cita[]
 
   @@map("provincias")
 }
@@ -243,6 +247,8 @@ model Pensionado {
   pensiones          Pension[]
   trayectoria        TrayectoriaRevolucionaria?
   altasBajas         AltasBaja[]
+  citas              Cita[]
+  atenciones         Atencion[]
 
   @@index([categoriaId, estado])
   @@index([territorioId, estado])
@@ -429,4 +435,77 @@ model Auditoria {
   @@index([usuarioId, fechaHora])
   @@index([entidad, entidadId])
   @@map("auditoria")
+}
+
+// ===== Citas y Atenciones =====
+
+model Cita {
+  id                String   @id @default(cuid())
+  pensionadoId     String
+  funcionarioId    String // FK a Usuario
+  territorioId     String? // FK a Provincia
+  fechaHora        DateTime
+  duracionMinutos  Int      @default(30)
+  tipoAtencion     String   @default("PRESENCIAL") // PRESENCIAL, TELEFONICA, DOMICILIO
+  motivoId         String? // FK lógica a NomencladorValor (motivo_cita)
+  estado           String   @default("PROGRAMADA") // PROGRAMADA, CONFIRMADA, COMPLETADA, CANCELADA, NO_ASISTIO, REAGENDADA
+  fechaReagendadaDesde DateTime?
+  motivoCancelacion String?
+  observaciones    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+  pensionado       Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+  funcionario      Usuario   @relation(fields: [funcionarioId], references: [id])
+  atencion         Atencion?
+  territorio       Provincia? @relation(fields: [territorioId], references: [id])
+
+  @@index([funcionarioId, fechaHora])
+  @@index([pensionadoId, fechaHora])
+  @@map("citas")
+}
+
+model Atencion {
+  id              String   @id @default(cuid())
+  citaId          String?  @unique
+  pensionadoId    String
+  funcionarioId   String // FK a Usuario (quien atendió)
+  tipoSolicitudId String? // FK lógica a NomencladorValor
+  descripcion     String
+  accionesTomadas String?
+  estado          String   @default("ABIERTA") // ABIERTA, EN_SEGUIMIENTO, CERRADA, PENDIENTE_RESPUESTA
+  fechaAtencion   DateTime @default(now())
+  fechaCierre     DateTime?
+  resultado       String?
+  observaciones   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+  cita            Cita?    @relation(fields: [citaId], references: [id])
+  pensionado      Pensionado @relation(fields: [pensionadoId], references: [id], onDelete: Cascade)
+  funcionario     Usuario   @relation(fields: [funcionarioId], references: [id])
+  derivaciones    Derivacion[]
+
+  @@map("atenciones")
+}
+
+model Derivacion {
+  id                String   @id @default(cuid())
+  atencionId       String
+  tipoDestinatario String // INTERNO, EXTERNO
+  funcionarioDestinoId String? // si tipoDestinatario = INTERNO
+  institucionExterna String?
+  descripcion      String
+  fechaDerivacion  DateTime @default(now())
+  plazoRespuesta   DateTime?
+  fechaRespuesta   DateTime?
+  respuesta        String?
+  estado           String   @default("PENDIENTE") // PENDIENTE, RESPONDIDA, VENCIDA, CANCELADA
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+  atencion         Atencion @relation(fields: [atencionId], references: [id], onDelete: Cascade)
+  funcionarioDestino Usuario? @relation("derivacion_funcionario_destino", fields: [funcionarioDestinoId], references: [id])
+
+  @@map("derivaciones")
 }

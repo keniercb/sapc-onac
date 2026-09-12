@@ -346,6 +346,47 @@ async function main() {
     })
   }
 
+  // ===== Citas y Atenciones demo =====
+  console.log('📅 Creando citas y atenciones demo...')
+  const pensionadosParaCitas = await prisma.pensionado.findMany({ where: { deletedAt: null }, take: 5 })
+  const hoy = new Date()
+  for (let i = 0; i < pensionadosParaCitas.length; i++) {
+    const p = pensionadosParaCitas[i]
+    const fechaCita = new Date(hoy.getTime() + (i - 1) * 24 * 60 * 60 * 1000)
+    fechaCita.setHours(9 + i, 0, 0, 0)
+
+    const cita = await prisma.cita.create({
+      data: {
+        pensionadoId: p.id,
+        funcionarioId: admin.id,
+        territorioId: provHabana?.id,
+        fechaHora: fechaCita,
+        duracionMinutos: 30,
+        tipoAtencion: i % 3 === 0 ? 'TELEFONICA' : 'PRESENCIAL',
+        estado: i < 2 ? 'COMPLETADA' : 'PROGRAMADA',
+        observaciones: `Cita demo ${i+1} para ${p.nombres}`,
+      }
+    })
+
+    // Para las 2 primeras citas (completadas), crear atenciones
+    if (i < 2) {
+      await prisma.atencion.create({
+        data: {
+          citaId: cita.id,
+          pensionadoId: p.id,
+          funcionarioId: admin.id,
+          descripcion: `Consulta sobre trámite de pensión del pensionado ${p.nombres} ${p.primerApellido}`,
+          accionesTomadas: 'Verificación documental y orientación al pensionado',
+          estado: 'CERRADA',
+          fechaAtencion: fechaCita,
+          fechaCierre: new Date(fechaCita.getTime() + 30 * 60 * 1000),
+          resultado: 'Trámite orientado, se solicita documentación adicional',
+          observaciones: 'Atención completada satisfactoriamente',
+        }
+      })
+    }
+  }
+
   // ===== Notificación demo =====
   console.log('🔔 Creando notificación demo...')
   const notif = await prisma.notificacion.create({
@@ -376,6 +417,7 @@ async function main() {
   console.log('   • 16 nomencladores con valores')
   console.log('   • 15 provincias y ~150 municipios')
   console.log('   • 5 pensionados demo con domicilios, cuentas, pensiones, trayectoria')
+  console.log('   • 5 citas demo (2 completadas con atenciones, 3 programadas)')
   console.log('   • 1 notificación demo para el admin')
 }
 
