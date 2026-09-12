@@ -104,6 +104,7 @@ pnpm docker:dev:up
 # → postgres (5432), redis (6379), api (4000), web (3000)
 
 # 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
+# Los scripts db:* cargan automáticamente el .env raíz via dotenv-cli
 pnpm db:push
 pnpm db:seed
 
@@ -111,6 +112,18 @@ pnpm db:seed
 # Web:  http://localhost:3000
 # API:  http://localhost:4000/health
 ```
+
+> **¿Error `Environment variable not found: DATABASE_URL`?**
+> Prisma busca `.env` en el directorio donde se ejecuta el comando (`apps/web/`).
+> Los scripts `pnpm db:push`, `pnpm db:seed`, etc. ya cargan el `.env` raíz
+> automáticamente via `dotenv-cli`. Si el error persiste:
+> ```bash
+> # Opción A: crea apps/web/.env con DATABASE_URL (ver apps/web/.env.example)
+> cp apps/web/.env.example apps/web/.env
+>
+> # Opción B: ejecuta desde apps/web con el .env raíz
+> cd apps/web && pnpm db:push
+> ```
 
 Comandos útiles (Linux/macOS usa `make`, Windows usa `make.cmd` o `pnpm docker:dev:*`):
 ```bash

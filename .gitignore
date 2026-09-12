@@ -19,6 +19,8 @@ build/
 # Excepciones: ejemplos sí se commitean
 !.env.example
 !.env.sqlite.example
+!apps/web/.env.example
+!apps/api/.env.example
 
 # Database (SQLite local para desarrollo)
 *.db
