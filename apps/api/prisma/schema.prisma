@@ -3,9 +3,15 @@
 // Provider: PostgreSQL 16 (dev con docker-compose.dev.yml y prod)
 // Para desarrollo local sin Docker (sandbox): usar `schema.sqlite.prisma`
 // (ver scripts/switch-db-sqlite.sh)
+//
+// NOTA: el campo `output` apunta al node_modules raíz del monorepo porque
+// pnpm con shamefully-hoist=true instala @prisma/client en la raíz.
+// Sin este output, Prisma generaría el cliente en apps/api/node_modules/.prisma/client
+// y @prisma/client no lo encontraría.
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
 }
 
 datasource db {

@@ -3,18 +3,20 @@
   "version": "0.3.0",
   "private": true,
   "scripts": {
+    "predev": "prisma generate --schema=prisma/schema.prisma",
     "dev": "tsx watch src/index.ts",
-    "dev:bun": "bun --hot src/index.ts",
+    "dev:bun": "prisma generate --schema=prisma/schema.prisma && bun --hot src/index.ts",
     "start": "tsx src/index.ts",
     "start:bun": "bun src/index.ts",
     "lint": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "db:push": "dotenv -e ../../.env -- prisma db push --accept-data-loss",
-    "db:generate": "dotenv -e ../../.env -- prisma generate",
-    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
-    "db:reset": "dotenv -e ../../.env -- prisma migrate reset",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma || echo 'Prisma generate skipped (no DATABASE_URL or prisma not yet installed)'",
+    "db:push": "dotenv -e ../../.env -- prisma db push --accept-data-loss --schema=prisma/schema.prisma",
+    "db:generate": "dotenv -e ../../.env -- prisma generate --schema=prisma/schema.prisma",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema=prisma/schema.prisma",
+    "db:reset": "dotenv -e ../../.env -- prisma migrate reset --schema=prisma/schema.prisma",
     "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "db:studio": "dotenv -e ../../.env -- prisma studio"
+    "db:studio": "dotenv -e ../../.env -- prisma studio --schema=prisma/schema.prisma"
   },
   "dependencies": {
     "hono": "^4.6.0",
