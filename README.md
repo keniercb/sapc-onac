@@ -80,9 +80,15 @@ sapc-onac/
 ### Requisitos previos
 
 - **Node.js 26.8.2 LTS** (pin estricto — ver `.nvmrc`)
-- **pnpm 9.15.0** (habilitar con `corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+- **pnpm 9.15.0** (`npm install -g pnpm@9.15.0` — recomendado en Windows)
 - **Docker 24+** con Docker Compose v2 (para dev y prod con Docker)
-- **Bun 1.3+** (para ejecutar el backend Hono — `curl -fsSL https://bun.sh/install | bash`)
+- **Bun 1.3+** (opcional — solo si quieres máximo rendimiento en el backend.
+  Sin Bun, el backend usa `tsx watch` que también tiene hot reload y funciona
+  en Windows sin instalación adicional. Ver `apps/api/package.json` script `dev`.)
+
+> **Windows sin Bun**: si `pnpm dev:api` falla con `"bun" no se reconoce como
+> un comando`, ya está resuelto. El script `dev` ahora usa `tsx watch` (Node.js
+> nativo). Bun es opcional: solo se usa en Docker/prod para mejor performance.
 
 ### Opción A — Desarrollo con Docker (recomendado, mirror de prod)
 

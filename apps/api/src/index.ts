@@ -1,11 +1,12 @@
 /**
  * SAPC-ONAC Backend API — Entry point
- * Hono framework running on Bun, NestJS-style architecture.
+ * Hono framework con arquitectura NestJS-style.
  *
- * En producción (Fase 1+): este código se migraría a NestJS real
- * manteniendo la misma estructura de módulos/controllers/services.
+ * Compatible con 2 runtimes:
+ *   - Desarrollo local (Windows/macOS/Linux sin Bun): `pnpm dev` → usa tsx watch
+ *   - Docker / producción (con Bun instalado): `pnpm dev:bun` → usa bun --hot (más rápido)
  *
- * Puerto: 4000 (fijo, requerido por el gateway Caddy)
+ * Puerto: 4000 (fijo)
  */
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
