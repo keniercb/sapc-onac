@@ -26,7 +26,7 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     no_proxy=${no_proxy} \
     npm_config_registry=${npm_config_registry}
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 COPY package.json bun.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN \
@@ -52,7 +52,7 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     https_proxy=${https_proxy} \
     no_proxy=${no_proxy}
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

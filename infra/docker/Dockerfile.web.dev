@@ -39,8 +39,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ===== Habilitar pnpm via corepack =====
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+# ===== Instalar pnpm 9.15.0 globalmente =====
+# Usamos `npm install -g` en lugar de `corepack` porque:
+#  - Funciona detrás de proxy corporativo (respeta HTTP_PROXY)
+#  - No requiere descargar el binario desde un CDN externo (corepack lo hace)
+#  - Es más rápido y determinista
+RUN npm install -g pnpm@9.15.0
 
 WORKDIR /app
 

@@ -48,9 +48,12 @@ RUN curl -fsSL https://bun.sh/install | bash
 ENV BUN_INSTALL="/root/.bun"
 ENV PATH="${BUN_INSTALL}/bin:${PATH}"
 
-# ===== Habilitar pnpm via corepack =====
-# corepack respeta npm_config_registry (mirror npm local)
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+# ===== Instalar pnpm 9.15.0 globalmente =====
+# Usamos `npm install -g` en lugar de `corepack` porque:
+#  - Funciona detrás de proxy corporativo (respeta HTTP_PROXY)
+#  - No requiere descargar el binario desde un CDN externo (corepack lo hace)
+#  - Es más rápido y determinista
+RUN npm install -g pnpm@9.15.0
 
 WORKDIR /app
 
