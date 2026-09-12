@@ -1,0 +1,24 @@
+{
+  "name": "@sapc/api",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "start": "bun src/index.ts",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@hono/zod-validator": "^0.4.0",
+    "@prisma/client": "^6.11.0",
+    "zod": "^4.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.0",
+    "prisma": "^6.11.0",
+    "typescript": "^5.0.0"
+  }
+}

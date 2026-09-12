@@ -37,6 +37,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Agent browser / sandbox
-.zscripts/
+# Bun
 bun.lock
+
+# Sandbox internals
+.zscripts/
+mini-services-dist/

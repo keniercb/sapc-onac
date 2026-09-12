@@ -1,166 +1,208 @@
 # SAPC-ONAC — Sistema de Atención a Pensionados ONAC
 
 > **Proyecto:** Plataforma de gestión integral para la Oficina Nacional de Atención a Combatientes (ONAC), Cuba.
-> **Versión actual:** 0.1.0 — Fase 0 MVP implementada
-> **Fecha:** 2026-09-11
-> **Audiencia:** Project Manager + Arquitecto de Software
-> **Stack objetivo:** Node.js 26.8.2 LTS + Next.js 16 + Prisma + SQLite (dev) / PostgreSQL 16 (prod) + Turborepo (prod)
+> **Versión actual:** 0.3.0 — Fase 1 (Monorepo + Backend separado)
+> **Fecha:** 2026-09-12
+> **Stack:** Node.js 26.8.2 LTS · Next.js 16 · Hono/NestJS · Prisma · PostgreSQL 16 · Turborepo
 
 ## Estado del Proyecto
 
-✅ **Fase 0 — MVP Implementada y Verificada**
+✅ **Fase 0 completada:** MVP funcional con login, sidebar, CRUD pensionados, nomencladores
+✅ **Fase 1 completada (en sandbox):** Backend desacoplado con Hono (NestJS-style), frontend con cliente HTTP centralizado
 
-- Login con sesión cookie httpOnly (bloqueo tras 5 intentos fallidos)
-- Dashboard con KPIs
-- Sidebar con menú filtrado por rol (RBAC)
-- Topbar con burbuja de notificaciones + menú de usuario (Ver perfil, Cambiar contraseña, Cerrar sesión)
-- Patrón CRUD genérico reutilizable (`<CrudPage config={...} />`)
-- Toasts Sonner para feedback de acciones y errores
-- 30 entidades Prisma modeladas
-- 16 nomencladores ONAC cargados con sus valores
-- 15 provincias y ~150 municipios
-- 5 pensionados demo con datos completos
-- Vista de Nomencladores con cards y modal de valores
-- API routes completas para pensionados, nomencladores, auth, notificaciones, usuarios
-
-## Estructura del Repositorio
+## Arquitectura del Monorepo
 
 ```
 sapc-onac/
-├── 01-requisitos-funcionales.md     # 42 RF en 10 módulos
-├── 02-plan-desarrollo.md           # Plan en 5 fases + stack + arquitectura frontend
-├── 03-modelos-datos.md             # 30 entidades modeladas
-├── diagrama-er.png                  # Diagrama ER visual
-├── README.md                        # Este archivo
-└── app/                             # Implementación Fase 0 (Next.js 16)
-    ├── prisma/
-    │   ├── schema.prisma            # 30 modelos Prisma
-    └── seed.ts                      # Seeder con nomencladores + datos demo
+├── apps/
+│   ├── web/                         # Frontend Next.js 16
+│   │   ├── src/
+│   │   │   ├── app/                 # App Router (páginas)
+│   │   │   ├── components/          # layout/, crud/, views/
+│   │   │   ├── lib/
+│   │   │   │   ├── api/client.ts   # Cliente HTTP centralizado
+│   │   │   │   ├── auth/           # AuthProvider con RBAC
+│   │   │   │   ├── navigation/     # menu-config (Sidebar)
+│   │   │   │   └── query/          # TanStack Query
+│   │   │   └── hooks/
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma       # 30 modelos
+│   │   │   └── seed.ts             # Nomencladores + datos demo
+│   │   ├── package.json            # @sapc/web
+│   │   ├── next.config.ts
+│   │   └── tsconfig.json
+│   └── api/                         # Backend Hono (NestJS-style)
+│       ├── src/
+│       │   ├── index.ts            # Entry point (puerto 4000)
+│       │   ├── lib/db.ts           # PrismaClient singleton
+│       │   ├── common/
+│       │   │   ├── middleware/
+│       │   │   │   ├── auth-middleware.ts
+│       │   │   │   └── error-handler.ts
+│       │   │   └── decorators/permissions.ts
+│       │   └── modules/
+│       │       ├── auth/           # auth.module + auth.service
+│       │       ├── pensionados/
+│       │       ├── nomencladores/
+│       │       ├── notificaciones/
+│       │       └── usuarios/
+│       └── package.json             # @sapc/api
+├── packages/
+└── shared/                          # Tipos + schemas Zod compartidos
     ├── src/
-    │   ├── app/
-    │   │   ├── layout.tsx           # AuthProvider + QueryProvider + Sonner Toaster
-    │   │   ├── page.tsx             # SPA: dashboard/pensionados/nomencladores
-    │   │   └── api/
-    │   │       ├── auth/route.ts         # POST/DELETE/GET login, logout, me
-    │   │       ├── pensionados/          # CRUD completo
-    │   │       ├── nomencladores/        # Listado + valores por nomenclador
-    │   │       ├── notificaciones/        # Listado + marcar leídas/archivadas
-    │   │       └── usuarios/              # Perfil + cambio de contraseña
-    │   ├── components/
-    │   │   ├── layout/
-    │   │   │   ├── AppShell.tsx          # Sidebar + Topbar + main
-    │   │   │   ├── Sidebar.tsx           # Menú filtrado por permisos RBAC
-    │   │   │   └── Topbar.tsx           # Notif + UserMenu (perfil/password/logout)
-    │   │   ├── crud/
-    │   │   │   └── CrudPage.tsx         # Patrón CRUD genérico reutilizable
-    │   │   ├── views/
-    │   │   │   ├── PensionadosView.tsx  # Configuración CrudPage para pensionados
-    │   │   │   └── NomencladoresView.tsx
-    │   │   ├── Dashboard.tsx           # KPIs y pensionados recientes
-    │   │   └── LoginScreen.tsx
-    │   └── lib/
-    │       ├── auth/auth-context.tsx   # AuthProvider con RBAC
-    │       ├── navigation/menu-config.ts # Definición del menú
-    │       ├── query/query-provider.tsx # TanStack Query
-    │       ├── db.ts                  # PrismaClient singleton
-    │       └── utils.ts
-    ├── package.json
-    ├── tsconfig.json
-    ├── next.config.ts
-    ├── tailwind.config.ts
-    └── eslint.config.mjs
+    │   ├── types.ts                # Pensionado, AuthUser, NomencladorValor
+    │   ├── enums.ts                # ROLES, MODULOS, ACCIONES
+    │   ├── schemas.ts              # Zod schemas (carnet, login, changePassword)
+    │   └── index.ts
+    └── package.json                # @sapc/shared
+├── infra/
+└── docker/
+    ├── docker-compose.yml          # PostgreSQL + Redis + API + Web
+    ├── api.Dockerfile              # Multi-stage Bun
+    ├── web.Dockerfile              # Multi-stage Node.js 26.8.2
+    └── postgres/init.sql
+├── 01-requisitos-funcionales.md    # 42 RF en 10 módulos
+├── 02-plan-desarrollo.md           # Plan en 5 fases
+├── 03-modelos-datos.md             # 30 entidades modeladas
+├── diagrama-er.png                 # Diagrama ER visual
+├── turbo.json                      # Pipeline Turborepo
+├── pnpm-workspace.yaml             # Workspace config
+├── package.json                    # Raíz monorepo
+├── tsconfig.base.json              # TS config base
+├── .nvmrc                          # Node.js 26.8.2 pin
+└── README.md
 ```
 
-## Entregables de Documentación
+## Cómo Ejecutar
 
-| # | Archivo | Descripción |
-|---|---|---|
-| 1 | [`01-requisitos-funcionales.md`](./01-requisitos-funcionales.md) | 42 requisitos funcionales en 10 módulos (Autenticación, Pensionados, Nomencladores, Citas, Salud, Necesidades, Fallecimiento, Reportes, Auditoría, Notificaciones, UI). Incluye criterios de aceptación, RNF, matriz de trazabilidad y priorización para roadmap. |
-| 2 | [`02-plan-desarrollo.md`](./02-plan-desarrollo.md) | Plan en 5 fases (~37 semanas). Stack detallado (Node.js 26.8.2 LTS + Next.js 14 + NestJS + PostgreSQL + Prisma + Turborepo). Estructura del monorepo, arquitectura frontend (Sidebar por rol + Topbar + CRUD genérico + toasts con Sonner), CI/CD, riesgos, topología on-premise Cuba. |
-| 3 | [`03-modelos-datos.md`](./03-modelos-datos.md) | 30 entidades modeladas en 7 dominios: Identidad, Trayectoria/Pensión, Nomencladores, Atención, Salud/Fallecimiento, Seguridad/Auditoría, Notificaciones. Atributos tipados, relaciones, índices, estrategias de auditoría, versionado de nomencladores, cifrado de datos sensibles. Incluye esquema Prisma de ejemplo. |
-| 4 | [`diagrama-er.png`](./diagrama-er.png) | Diagrama entidad-relación visual con las 30 entidades y sus relaciones principales. |
-
-## Cómo Ejecutar la App (Fase 0)
-
-### Prerrequisitos
-- Node.js 26.8.2 LTS (pin estricto)
-- Bun 1.3+ (runtime recomendado) o pnpm 9
-- SQLite (incluido en el repo vía Prisma)
-
-### Instalación y arranque
-
+### En el sandbox (desarrollo)
 ```bash
-cd app
-bun install                      # o: pnpm install
-bun run db:push                  # crea la base de datos SQLite local
-bun prisma/seed.ts               # carga nomencladores + datos demo
-bun run dev                      # http://localhost:3000
+# Frontend Next.js (puerto 3000)
+cd apps/web
+bun install
+bun run db:push        # crea DB SQLite local
+bun prisma/seed.ts     # carga nomencladores + datos demo
+bun run dev
+
+# Backend API (puerto 4000, en otra terminal)
+cd apps/api
+bun install
+bun src/index.ts
 ```
 
-### Credenciales demo
+### En producción (Docker on-premise)
+```bash
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con POSTGRES_PASSWORD y JWT_SECRET
 
+# Levantar todo el stack
+docker compose -f infra/docker/docker-compose.yml up -d
+```
+
+### Credenciales demo (Fase 0)
 - **Usuario:** `admin`
 - **Contraseña:** `admin123`
 
-## Stack Tecnológico (Fase 0 — Implementado)
+## Comunicación Frontend ↔ Backend
 
-- **Runtime:** Node.js 26.8.2 LTS
-- **Framework:** Next.js 16 (App Router) + React 19
-- **Lenguaje:** TypeScript 5
-- **Estilos:** Tailwind CSS 4 + shadcn/ui (New York)
-- **ORM:** Prisma 6 (SQLite para desarrollo, PostgreSQL 16 para producción)
-- **Estado:** TanStack Query 5 (servidor) + Zustand 5 (cliente)
-- **Tablas:** TanStack Table 8
-- **Formularios:** React Hook Form 7 + Zod 4
-- **Toasts:** Sonner 2
-- **Iconos:** Lucide React
-- **Auth:** Cookie httpOnly + sesión en DB (en Fase 1 se migrará a JWT + bcrypt)
+El frontend Next.js llama directamente al backend vía HTTP con cookies `credentials: 'include'`:
 
-## Stack Tecnológico (Fase 1+ — Planificado)
+```ts
+// apps/web/src/lib/api/client.ts
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
-Ver [`02-plan-desarrollo.md`](./02-plan-desarrollo.md) para detalles completos.
+export const api = {
+  get:  (path) => fetch(`${API_BASE}/backend${path}`, { credentials: 'include' }),
+  post: (path, body) => fetch(`${API_BASE}/backend${path}`, { method: 'POST', body }),
+  // ...
+}
+```
 
-- **Monorepo:** Turborepo + pnpm 9 workspaces
-- **Backend:** NestJS 10 (separado del frontend)
-- **BD Producción:** PostgreSQL 16
-- **Auth:** JWT + bcrypt (cost ≥ 12)
-- **Notificaciones tiempo real:** SSE (Server-Sent Events)
-- **Colas:** BullMQ + Redis
-- **Despliegue:** Docker + Docker Compose on-premise Cuba
+**Rutas del backend:**
+- `POST /backend/auth/login` — Iniciar sesión
+- `DELETE /backend/auth/logout` — Cerrar sesión
+- `GET /backend/auth/me` — Usuario actual
+- `GET /backend/pensionados` — Listar (paginación, filtros, sort)
+- `POST /backend/pensionados` — Crear
+- `GET/PUT/DELETE /backend/pensionados/:id`
+- `GET /backend/nomencladores`
+- `GET/POST /backend/nomencladores/:codigo/valores`
+- `GET/PATCH /backend/notificaciones`
+- `GET /backend/usuarios/perfil`
+- `POST /backend/usuarios/password` — Cambio de contraseña
 
-## Fuentes Analizadas
+## Stack Tecnológico
 
-- `Nomencladores ONAC a Kenier.xlsx` — Plantilla actual con 30 columnas y nomencladores ONAC (provincias, municipios, categorías, frentes, columnas, grados militares, etc.).
-- `REVISIÓN DE LA PLANTILLA ONAC POR SANDRA.docx` — Revisión crítica de Sandra Moya Zerquera con necesidades adicionales: chequeos médicos, dispensarización, altas/bajas con causas, datos completos de fallecimiento (incluye cremación, cementerio, familiar con potestad), diferenciación "caído" vs "fallecido", módulo de necesidades del combatiente, ACPDI, grado "Primer Coronel", reemplazo de "Chequera" por "Control Bancario".
+### Frontend (`apps/web`)
+- Next.js 16 (App Router) + React 19
+- TypeScript 5
+- Tailwind CSS 4 + shadcn/ui (New York)
+- TanStack Query 5 + Zustand 5
+- TanStack Table 8
+- React Hook Form 7 + Zod 4
+- Sonner 2 (toasts)
+- Lucide React
+- Prisma 6 (SQLite dev / PostgreSQL 16 prod)
 
-## Módulos Funcionales
+### Backend (`apps/api`)
+- **Hono 4** (web framework para Bun) — estructura NestJS-style
+- Bun 1.3+ (runtime)
+- TypeScript 5
+- Prisma 6 (comparte schema con frontend)
+- class-validator + Zod 4 (validación)
+- Hono middleware: cors, logger, auth, error-handler
+- En producción: migración a NestJS 10 real manteniendo la misma estructura
 
-1. **Autenticación y Autorización (AUT)** — 7 RF: login con bloqueo, RBAC, recuperación de contraseña, cierre de sesión, perfil propio, cambio autogestionado, burbuja de notificaciones.
-2. **Gestión de Pensionados (PEN)** — 9 RF: registro, consulta, edición, baja, domicilios, cuentas bancarias, trayectoria, laboral/pensión, altas.
-3. **Nomencladores (NOM)** — 4 RF: administración centralizada, importación Excel, versionado, validación referencial.
-4. **Citas y Atenciones (CIT)** — 4 RF: programación, registro, derivaciones, calendario.
-5. **Salud (SAL)** — 3 RF: chequeos médicos, dispensarización, reincorporación SMA.
-6. **Necesidades del Combatiente (NEC)** — 3 RF: registro, seguimiento, reporte de problemas resueltos.
-7. **Fallecimiento (FAL)** — 5 RF: registro, cementerio/panteón, cremación, familiar con potestad, caído vs fallecido.
-8. **Reportes (REP)** — 3 RF: dashboard directivo, reportes operativos, reportes personalizados.
-9. **Auditoría (AUD)** — 2 RF: registro automático, consulta filtrada.
-10. **Notificaciones (NOT)** — 3 RF: generación por eventos, marcaje y archivado, suscripción SSE.
-11. **Interfaz de Usuario y Feedback (UI)** — 2 RF: toasts de feedback, manejo de errores no capturados.
+### Paquete shared (`packages/shared`)
+- Tipos TypeScript compartidos (Pensionado, AuthUser, NomencladorValor)
+- Enums (ROLES, MODULOS, ACCIONES)
+- Schemas Zod (validación de formularios + API)
+- Sin dependencias externas excepto Zod
 
-## Próximos Pasos (Fase 1)
+### Infraestructura
+- **Monorepo:** Turborepo 2 + pnpm 9 workspaces
+- **Contenedores:** Docker + Docker Compose
+- **BD Producción:** PostgreSQL 16-bookworm
+- **Cache/Colas:** Redis 7-alpine (para BullMQ en Fase 2)
+- **Pin Node.js:** 26.8.2 LTS estricto (`.nvmrc` + `engines`)
 
-1. Migrar auth de cookie simple a JWT + bcrypt real
-2. Implementar NestJS backend separado en monorepo Turborepo
-3. Migrar SQLite → PostgreSQL 16
-4. Implementar SSE para notificaciones en tiempo real
-5. Añadir módulos de Citas, Necesidades, Fallecimiento
-6. Configurar Docker Compose para despliegue on-premise
-7. Configurar GitHub Actions CI con Node.js 26.8.2 LTS
+## Verificación Fase 1 (sandbox)
+
+✅ Backend desacoplado corriendo en puerto 4000 (Hono + Bun)
+✅ Frontend Next.js llama al backend vía `http://localhost:4000/backend/*`
+✅ Login funcional con cookie httpOnly compartida entre dominios
+✅ RBAC: 6 roles + ~50 permisos aplicados
+✅ CRUD de pensionados funcionando end-to-end
+✅ Vista de nomencladores funcional
+✅ Toasts Sonner para feedback y errores
+✅ Cambio de contraseña con política de complejidad
+✅ Burbuja de notificaciones con polling 30s
+✅ Auditoría automática de login/logout/CRUD
+
+## Próximos Pasos (Fase 2)
+
+1. Migrar auth de cookie simple a **JWT + bcrypt real**
+2. Implementar **SSE** para notificaciones en tiempo real
+3. Añadir módulos: Citas, Necesidades, Fallecimiento
+4. Implementar **BullMQ + Redis** para colas (importación masiva, reportes)
+5. Configurar **GitHub Actions** CI con Node.js 26.8.2 LTS
+6. Migrar Hono → NestJS 10 real (estructura idéntica, fácil migración)
+7. Migrar SQLite → PostgreSQL 16 (solo cambiar `provider` en `schema.prisma`)
 
 ## Pendientes de Validación con ONAC
 
-- Lista oficial de causas de alta y de baja (inexistentes según Sandra).
-- Confirmación del significado del campo AEP.
-- Política de conservación de documentos adjuntos.
-- Política de retención de notificaciones (90 días propuesto).
-- Lista completa de gestas a reconocer.
+- Lista oficial de causas de alta y de baja (inexistentes según Sandra)
+- Confirmación del significado del campo AEP
+- Política de conservación de documentos adjuntos
+- Política de retención de notificaciones (90 días propuesto)
+- Lista completa de gestas a reconocer
+
+## Documentación
+
+| # | Archivo | Descripción |
+|---|---|---|
+| 1 | [`01-requisitos-funcionales.md`](./01-requisitos-funcionales.md) | 42 RF en 10 módulos |
+| 2 | [`02-plan-desarrollo.md`](./02-plan-desarrollo.md) | Plan en 5 fases + arquitectura |
+| 3 | [`03-modelos-datos.md`](./03-modelos-datos.md) | 30 entidades modeladas |
+| 4 | [`diagrama-er.png`](./diagrama-er.png) | Diagrama ER visual |

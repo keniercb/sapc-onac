@@ -1,0 +1,87 @@
+# SAPC-ONAC — Docker Compose para despliegue on-premise
+# Stack: PostgreSQL 16 + Backend API (Hono/NestJS) + Frontend Next.js + Redis
+# En el sandbox: no se usa (se ejecuta bun run dev). En prod: docker compose up -d.
+
+version: '3.9'
+
+services:
+  # ===== PostgreSQL 16 =====
+  postgres:
+    image: postgres:16-bookworm
+    container_name: sapc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sapc_onac
+      POSTGRES_USER: sapc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sapc_local_dev}
+      TZ: America/Havana
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sapc -d sapc_onac"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Redis (para BullMQ colas + cache) =====
+  redis:
+    image: redis:7-alpine
+    container_name: sapc-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ===== Backend API (Hono on Bun) =====
+  # En prod: construir imagen con Dockerfile.api
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: sapc-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://sapc:${POSTGRES_PASSWORD:-sapc_local_dev}@postgres:5432/sapc_onac?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_prod}
+      CORS_ORIGIN: http://localhost:3000
+      TZ: America/Havana
+    ports:
+      - "4000:4000"
+
+  # ===== Frontend Next.js =====
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: sapc-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://api:4000
+      TZ: America/Havana
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  redis_data:
