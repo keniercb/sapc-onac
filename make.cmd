@@ -24,16 +24,23 @@ setlocal EnableDelayedExpansion
 
 set DEV_COMPOSE=infra\docker\docker-compose.dev.yml
 set PROD_COMPOSE=infra\docker\docker-compose.yml
+set LOCAL_COMPOSE=infra\docker\docker-compose.local.yml
 
 REM Comando base docker compose
 set DC=docker compose -f %DEV_COMPOSE%
 set DCP=docker compose -f %PROD_COMPOSE%
+set DCL=docker compose -f %LOCAL_COMPOSE%
 
 REM Verificar si existe .env
 if exist .env (
   set ENV_FLAG=--env-file .env
 ) else (
   set ENV_FLAG=
+)
+if exist .env.local (
+  set ENV_LOCAL_FLAG=--env-file .env.local
+) else (
+  set ENV_LOCAL_FLAG=
 )
 if exist .env.production (
   set ENV_PROD_FLAG=--env-file .env.production
@@ -43,6 +50,11 @@ if exist .env.production (
 
 if "%~1"=="" goto :help
 if "%~1"=="help" goto :help
+if "%~1"=="local-up" goto :local_up
+if "%~1"=="local-down" goto :local_down
+if "%~1"=="local-logs" goto :local_logs
+if "%~1"=="local-psql" goto :local_psql
+if "%~1"=="local-debug" goto :local_debug
 if "%~1"=="dev-up" goto :dev_up
 if "%~1"=="dev-down" goto :dev_down
 if "%~1"=="dev-logs" goto :dev_logs
@@ -65,7 +77,15 @@ goto :help
 :help
 echo SAPC-ONAC — Comandos disponibles (Windows)
 echo.
-echo Desarrollo (docker compose dev^):
+echo Desarrollo local hibrido (RECOMENDADO^):
+echo   make.cmd local-up       Levanta solo postgres + redis en Docker
+echo   make.cmd local-down     Detiene postgres + redis
+echo   make.cmd local-logs     Sigue logs de postgres + redis
+echo   make.cmd local-psql     Abre psql en el postgres local
+echo   make.cmd local-debug    Levanta con pgadmin (:5050^)
+echo   -^> Luego: pnpm dev:api + pnpm dev:web en terminales separadas
+echo.
+echo Desarrollo full Docker (todo en contenedores^):
 echo   make.cmd dev-up        Levanta postgres + redis + api + web (con hot reload^)
 echo   make.cmd dev-down      Detiene el stack de desarrollo
 echo   make.cmd dev-logs      Sigue logs de api y web
@@ -87,6 +107,49 @@ echo Utilidades:
 echo   make.cmd switch-pg     Cambia schema Prisma a PostgreSQL
 echo   make.cmd switch-sqlite Cambia schema Prisma a SQLite (sandbox^)
 echo   make.cmd clean         Limpia volumenes y caches (cuidado: borra datos^)
+goto :eof
+
+REM ===== DESARROLLO LOCAL HIBRIDO (RECOMENDADO) =====
+
+:local_up
+if not exist .env.local (
+  echo Creando .env.local desde .env.local.example...
+  copy .env.local.example .env.local >nul
+)
+%DCL% %ENV_LOCAL_FLAG% up -d postgres redis
+echo.
+echo ✓ PostgreSQL + Redis levantados en Docker:
+echo   - Postgres: localhost:5432 (sapc/sapc_dev_pwd^)
+echo   - Redis:    localhost:6379
+echo.
+echo Proximos pasos:
+echo   1. pnpm db:push    # crea tablas
+echo   2. pnpm db:seed    # carga datos demo
+echo   3. pnpm dev:api    # backend en :4000 (terminal 1^)
+echo   4. pnpm dev:web    # frontend en :3000 (terminal 2^)
+goto :eof
+
+:local_down
+%DCL% %ENV_LOCAL_FLAG% down
+goto :eof
+
+:local_logs
+%DCL% %ENV_LOCAL_FLAG% logs -f postgres redis
+goto :eof
+
+:local_psql
+%DCL% %ENV_LOCAL_FLAG% exec postgres psql -U sapc -d sapc_onac_dev
+goto :eof
+
+:local_debug
+if not exist .env.local (
+  copy .env.local.example .env.local >nul
+)
+%DCL% %ENV_LOCAL_FLAG% --profile debug up -d
+echo.
+echo ✓ Stack local + pgAdmin:
+echo   pgAdmin: http://localhost:5050 (admin@onac.cu / admin^)
+echo   Postgres: localhost:5432 (sapc/sapc_dev_pwd^)
 goto :eof
 
 :dev_up

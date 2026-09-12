@@ -1,0 +1,93 @@
+# SAPC-ONAC — Docker Compose para DESARROLLO LOCAL HÍBRIDO
+#
+# Solo levanta PostgreSQL 16 + Redis 7 (+ pgadmin opcional).
+# El frontend (Next.js) y backend (Hono API) se ejecutan directamente
+# en el host con `pnpm dev:web` y `pnpm dev:api` para máximo rendimiento
+# de hot reload (sin overhead de Docker para el código).
+#
+# Ventajas sobre docker-compose.dev.yml (full Docker):
+#  - Hot reload instantáneo (sin polling de Docker filesystem)
+#  - Sin problemas de permisos de Windows/WSL2
+#  - Prisma generate se ejecuta en el host (sin volúmenes complejos)
+#  - Debugging con breakpoints directo en VS Code / WebStorm
+#  - Misma BD que prod (PostgreSQL 16 + Redis 7)
+#
+# Uso:
+#   make local-up     # levanta postgres + redis
+#   pnpm db:push      # crea tablas
+#   pnpm db:seed      # carga datos demo
+#   pnpm dev:api      # backend en :4000 (terminal 1)
+#   pnpm dev:web      # frontend en :3000 (terminal 2)
+#   make local-down   # detiene postgres + redis
+
+services:
+  # ===== PostgreSQL 16 (idéntico a prod) =====
+  postgres:
+    image: postgres:16-bookworm
+    container_name: sapc-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sapc_onac_dev
+      POSTGRES_USER: sapc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sapc_dev_pwd}
+      TZ: America/Havana
+      PGTZ: America/Havana
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sapc -d sapc_onac_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - sapc-local-net
+
+  # ===== Redis 7 (idéntico a prod) =====
+  redis:
+    image: redis:7-alpine
+    container_name: sapc-redis-local
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_local_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - sapc-local-net
+
+  # ===== pgAdmin (opcional — solo con --profile debug) =====
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: sapc-pgadmin-local
+    restart: unless-stopped
+    profiles: ["debug"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@onac.cu
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_local_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sapc-local-net
+
+networks:
+  sapc-local-net:
+    driver: bridge
+
+volumes:
+  postgres_local_data:
+  redis_local_data:
+  pgadmin_local_data:

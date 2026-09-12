@@ -90,33 +90,71 @@ sapc-onac/
 > un comando`, ya está resuelto. El script `dev` ahora usa `tsx watch` (Node.js
 > nativo). Bun es opcional: solo se usa en Docker/prod para mejor performance.
 
-### Opción A — Desarrollo con Docker (recomendado, mirror de prod)
+### Opción A — Desarrollo local híbrido (RECOMENDADO)
 
-Stack idéntico a prod (PostgreSQL 16 + Redis 7 + API + Web) pero con hot reload.
+PostgreSQL + Redis en Docker, API + Web en el host con `pnpm dev`. Da **hot reload instantáneo** sin overhead de Docker para el código.
+
+```bash
+# 1. Setup inicial (solo primera vez)
+cp .env.local.example .env.local
+pnpm install
+
+# 2. Levantar PostgreSQL + Redis en Docker
+# Linux/macOS:
+make local-up
+# Windows:
+make.cmd local-up
+# Alternativa multiplataforma:
+pnpm docker:local:up
+# → postgres (5432), redis (6379)
+
+# 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
+pnpm db:generate    # genera PrismaClient
+pnpm db:push        # crea tablas
+pnpm db:seed        # carga nomencladores + datos demo
+
+# 4. Levantar API y Web en terminales separadas
+pnpm dev:api        # backend en :4000 (terminal 1)
+pnpm dev:web        # frontend en :3000 (terminal 2)
+
+# 5. Acceder
+# Web:  http://localhost:3000
+# API:  http://localhost:4000/health
+```
+
+**Ventajas sobre full Docker:**
+- ✅ Hot reload instantáneo (sin polling de Docker filesystem)
+- ✅ Sin problemas de permisos de Windows/WSL2
+- ✅ Prisma generate en el host (sin volúmenes complejos)
+- ✅ Debugging con breakpoints directo en VS Code / WebStorm
+- ✅ Misma BD que prod (PostgreSQL 16 + Redis 7)
+
+**Comandos útiles:**
+```bash
+make local-logs        # ver logs de postgres + redis
+make local-psql         # abrir psql
+make local-down         # detener servicios
+make local-debug        # levantar con pgadmin en :5050
+```
+
+### Opción B — Desarrollo full Docker (todo en contenedores)
+
+Stack completo en Docker con hot reload via bind-mounts (más lento en Windows).
 
 ```bash
 # 1. Setup inicial
 cp .env.example .env
-# Editar .env: ajustar POSTGRES_PASSWORD y JWT_SECRET
 pnpm install
 
 # 2. Levantar el stack completo
-# Linux/macOS:
-make dev-up
-# Windows (CMD/PowerShell):
-make.cmd dev-up
-# Alternativa multiplataforma:
-pnpm docker:dev:up
+make dev-up          # Linux/macOS
+make.cmd dev-up      # Windows
+pnpm docker:dev:up  # alternativa multiplataforma
 # → postgres (5432), redis (6379), api (4000), web (3000)
 
-# 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
-# Los scripts db:* cargan automáticamente el .env raíz via dotenv-cli
+# 3. Preparar base de datos
 pnpm db:push
 pnpm db:seed
-
-# 4. Acceder
-# Web:  http://localhost:3000
-# API:  http://localhost:4000/health
 ```
 
 > **¿Error `Environment variable not found: DATABASE_URL`?**
@@ -138,7 +176,7 @@ make dev-debug                   | make.cmd dev-debug               | (no equiva
 make help                        | make.cmd help                    | (ver Makefile o make.cmd)
 ```
 
-### Opción B — Desarrollo local sin Docker (sandbox)
+### Opción C — Desarrollo local sin Docker (sandbox SQLite)
 
 Si Docker no está disponible, usar SQLite con el script de switch:
 
@@ -160,7 +198,7 @@ pnpm dev:api    # backend en :4000
 pnpm dev:web    # frontend en :3000
 ```
 
-### Opción C — Producción on-premise (Docker)
+### Opción D — Producción on-premise (Docker)
 
 ```bash
 # 1. Configurar variables de entorno de producción

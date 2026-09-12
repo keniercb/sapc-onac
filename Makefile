@@ -21,17 +21,25 @@ SHELL := /bin/bash
 # Rutas
 DEV_COMPOSE := infra/docker/docker-compose.dev.yml
 PROD_COMPOSE := infra/docker/docker-compose.yml
+LOCAL_COMPOSE := infra/docker/docker-compose.local.yml
 
 # Comando base de docker compose
 DC := docker compose
 DC_DEV := $(DC) -f $(DEV_COMPOSE)
 DC_PROD := $(DC) -f $(PROD_COMPOSE)
+DC_LOCAL := $(DC) -f $(LOCAL_COMPOSE)
 
 # Detectar si existe .env
 ifneq (,$(wildcard .env))
   ENV_FILE := --env-file .env
 else
   ENV_FILE :=
+endif
+
+ifneq (,$(wildcard .env.local))
+  ENV_FILE_LOCAL := --env-file .env.local
+else
+  ENV_FILE_LOCAL :=
 endif
 
 ifneq (,$(wildcard .env.production))
@@ -44,7 +52,15 @@ endif
 help: ## Lista todos los comandos disponibles
         @echo "SAPC-ONAC — Comandos disponibles"
         @echo ""
-        @echo "Desarrollo (docker compose dev):"
+        @echo "Desarrollo local híbrido (RECOMENDADO):"
+        @echo "  make local-up       Levanta solo postgres + redis en Docker"
+        @echo "  make local-down     Detiene postgres + redis"
+        @echo "  make local-logs     Sigue logs de postgres + redis"
+        @echo "  make local-psql     Abre psql en el postgres local"
+        @echo "  make local-debug    Levanta con pgadmin (perfil debug, :5050)"
+        @echo "  → Luego: pnpm dev:api + pnpm dev:web en terminales separadas"
+        @echo ""
+        @echo "Desarrollo full Docker (todo en contenedores):"
         @echo "  make dev-up        Levanta postgres + redis + api + web (con hot reload)"
         @echo "  make dev-down      Detiene el stack de desarrollo"
         @echo "  make dev-logs      Sigue logs de api y web"
@@ -67,7 +83,53 @@ help: ## Lista todos los comandos disponibles
         @echo "  make switch-sqlite  Cambia schema Prisma a SQLite (sandbox)"
         @echo "  make clean         Limpia volúmenes y cachés (cuidado: borra datos)"
 
-# ===== DESARROLLO =====
+# ===== DESARROLLO LOCAL HÍBRIDO (RECOMENDADO) =====
+# Solo PostgreSQL + Redis en Docker. API + Web corren en el host con pnpm dev.
+# Ventajas: hot reload instantáneo, sin permisos de Docker, debugging con breakpoints.
+
+.PHONY: local-up
+local-up: ## Levanta solo postgres + redis en Docker (modo local híbrido)
+        @if [ ! -f .env.local ]; then \
+          echo "⚠️  .env.local no existe. Creando desde .env.local.example..."; \
+          cp .env.local.example .env.local; \
+          echo "✓ .env.local creado. Edítalo si necesitas cambiar credenciales."; \
+        fi
+        $(DC_LOCAL) $(ENV_FILE_LOCAL) up -d postgres redis
+        @echo ""
+        @echo "✓ PostgreSQL + Redis levantados en Docker:"
+        @echo "  - Postgres: localhost:5432 (sapc/sapc_dev_pwd)"
+        @echo "  - Redis:    localhost:6379"
+        @echo ""
+        @echo "Próximos pasos:"
+        @echo "  1. pnpm db:push    # crea tablas (si no existe)"
+        @echo "  2. pnpm db:seed    # carga datos demo (opcional)"
+        @echo "  3. pnpm dev:api    # backend en :4000 (terminal 1)"
+        @echo "  4. pnpm dev:web    # frontend en :3000 (terminal 2)"
+
+.PHONY: local-down
+local-down: ## Detiene postgres + redis (modo local)
+        $(DC_LOCAL) $(ENV_FILE_LOCAL) down
+
+.PHONY: local-logs
+local-logs: ## Sigue logs de postgres + redis
+        $(DC_LOCAL) $(ENV_FILE_LOCAL) logs -f postgres redis
+
+.PHONY: local-psql
+local-psql: ## Abre psql en el postgres local
+        $(DC_LOCAL) $(ENV_FILE_LOCAL) exec postgres psql -U sapc -d sapc_onac_dev
+
+.PHONY: local-debug
+local-debug: ## Levanta con pgadmin en :5050
+        @if [ ! -f .env.local ]; then \
+          cp .env.local.example .env.local; \
+        fi
+        $(DC_LOCAL) $(ENV_FILE_LOCAL) --profile debug up -d
+        @echo ""
+        @echo "✓ Stack local + pgAdmin:"
+        @echo "  - pgAdmin: http://localhost:5050 (admin@onac.cu / admin)"
+        @echo "  - Postgres: localhost:5432 (sapc/sapc_dev_pwd)"
+
+# ===== DESARROLLO FULL DOCKER =====
 
 .PHONY: dev-up
 dev-up: ## Levanta el stack de desarrollo

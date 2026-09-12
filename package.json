@@ -19,6 +19,11 @@
     "docker:dev:up": "docker compose -f infra/docker/docker-compose.dev.yml --env-file .env up -d",
     "docker:dev:down": "docker compose -f infra/docker/docker-compose.dev.yml --env-file .env down",
     "docker:dev:logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f api web",
+    "docker:local:up": "docker compose -f infra/docker/docker-compose.local.yml --env-file .env.local up -d postgres redis",
+    "docker:local:down": "docker compose -f infra/docker/docker-compose.local.yml --env-file .env.local down",
+    "docker:local:logs": "docker compose -f infra/docker/docker-compose.local.yml logs -f postgres redis",
+    "docker:local:psql": "docker compose -f infra/docker/docker-compose.local.yml exec postgres psql -U sapc -d sapc_onac_dev",
+    "docker:local:debug": "docker compose -f infra/docker/docker-compose.local.yml --env-file .env.local --profile debug up -d",
     "docker:prod:build": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production build",
     "docker:prod:up": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production up -d",
     "docker:prod:down": "docker compose -f infra/docker/docker-compose.yml --env-file .env.production down"
