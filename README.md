@@ -95,7 +95,12 @@ cp .env.example .env
 pnpm install
 
 # 2. Levantar el stack completo
+# Linux/macOS:
 make dev-up
+# Windows (CMD/PowerShell):
+make.cmd dev-up
+# Alternativa multiplataforma:
+pnpm docker:dev:up
 # → postgres (5432), redis (6379), api (4000), web (3000)
 
 # 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
@@ -107,14 +112,15 @@ pnpm db:seed
 # API:  http://localhost:4000/health
 ```
 
-Comandos útiles:
+Comandos útiles (Linux/macOS usa `make`, Windows usa `make.cmd` o `pnpm docker:dev:*`):
 ```bash
-make dev-logs        # seguir logs de api + web
-make dev-down        # detener
-make dev-psql        # abrir psql en postgres de dev
-make dev-reset-db    # resetear BD y reseed
-make dev-debug       # levantar con pgadmin en :5050
-make help            # ver todos los comandos
+# Linux/macOS                   | Windows (CMD/PowerShell)        | Alternativa pnpm
+make dev-logs                    | make.cmd dev-logs                | pnpm docker:dev:logs
+make dev-down                    | make.cmd dev-down                | pnpm docker:dev:down
+make dev-psql                    | make.cmd dev-psql                | (no equivale en pnpm)
+make dev-reset-db                | make.cmd dev-reset-db            | (no equivale en pnpm)
+make dev-debug                   | make.cmd dev-debug               | (no equivale en pnpm)
+make help                        | make.cmd help                    | (ver Makefile o make.cmd)
 ```
 
 ### Opción B — Desarrollo local sin Docker (sandbox)
@@ -123,7 +129,10 @@ Si Docker no está disponible, usar SQLite con el script de switch:
 
 ```bash
 # 1. Cambiar schema Prisma a SQLite
+# Linux/macOS:
 ./scripts/switch-db.sh sqlite
+# Windows:
+scripts\switch-db.bat sqlite
 cp .env.sqlite.example .env
 
 # 2. Instalar y preparar
@@ -142,13 +151,18 @@ pnpm dev:web    # frontend en :3000
 # 1. Configurar variables de entorno de producción
 cp .env.example .env.production
 # Editar .env.production:
-#   POSTGRES_PASSWORD=$(openssl rand -hex 32)
-#   JWT_SECRET=$(openssl rand -hex 32)
+#   POSTGRES_PASSWORD=$(openssl rand -hex 32)   # Linux/macOS
+#   POSTGRES_PASSWORD=                              # Windows PowerShell: -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 32 | % {[char]$_})
+#   JWT_SECRET=<generar igual que POSTGRES_PASSWORD>
 #   NEXT_PUBLIC_API_URL=https://api.onac.cu
 
 # 2. Construir imágenes y levantar
+# Linux/macOS:
 make prod-build
 make prod-up
+# Windows:
+make.cmd prod-build
+make.cmd prod-up
 ```
 
 Ver [`infra/docker/README.md`](./infra/docker/README.md) para detalles completos de despliegue, healthchecks, backups y troubleshooting.

@@ -30,8 +30,11 @@ Despliegue **dev** (desarrollo con hot reload) y **prod** (on-premise Cuba), amb
 
 - **Node.js 26.8.2 LTS** (pin estricto — ver `.nvmrc`)
 - **pnpm 9.15.0** (habilitado via corepack)
-- **Docker 24+** y **Docker Compose v2+**
+- **Docker 24+** y **Docker Compose v2+** (con WSL2 en Windows)
 - **Bun 1.3+** (para ejecutar el backend Hono en dev y prod)
+- **Make** (en Windows: usar `make.cmd` o instalar make via chocolatey/scoop)
+
+### Linux/macOS
 
 ```bash
 # Instalar pnpm
@@ -40,6 +43,22 @@ corepack prepare pnpm@9.15.0 --activate
 
 # Instalar Bun (para el backend)
 curl -fsSL https://bun.sh/install | bash
+```
+
+### Windows
+
+```powershell
+# Instalar pnpm
+corepack enable
+corepack prepare pnpm@9.15.0 --activate
+
+# Instalar Bun (PowerShell)
+powershell -c "irm bun.sh/install.ps1 | iex"
+
+# Opcional: instalar Make para usar `make dev-up` en lugar de `make.cmd dev-up`
+choco install make       # con Chocolatey
+# o
+scoop install make      # con Scoop
 ```
 
 ## Setup inicial (solo primera vez)
