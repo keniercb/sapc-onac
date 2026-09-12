@@ -48,6 +48,16 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
+      args:
+        # Proxy corporativo (build-time — solo para descargar deps)
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+        no_proxy: ${NO_PROXY:-}
+        npm_config_registry: ${npm_config_registry:-}
+        BUN_CONFIG_HTTP_PROXY: ${BUN_CONFIG_HTTP_PROXY:-${HTTP_PROXY:-}}
     container_name: sapc-api
     restart: unless-stopped
     depends_on:
@@ -63,6 +73,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_prod}
       CORS_ORIGIN: http://localhost:3000
       TZ: America/Havana
+      # Proxy en runtime (opcional — solo si el backend hace llamadas salientes)
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
     ports:
       - "4000:4000"
 
@@ -71,6 +88,15 @@ services:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      args:
+        # Proxy corporativo (build-time — solo para descargar deps)
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+        no_proxy: ${NO_PROXY:-}
+        npm_config_registry: ${npm_config_registry:-}
     container_name: sapc-web
     restart: unless-stopped
     depends_on:
@@ -79,6 +105,13 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://api:4000
       TZ: America/Havana
+      # Proxy en runtime (opcional — server components / fetch saliente)
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
     ports:
       - "3000:3000"
 

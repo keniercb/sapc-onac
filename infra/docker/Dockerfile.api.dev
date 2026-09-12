@@ -3,29 +3,69 @@
 # No compila, solo deja el código listo para `pnpm dev` (bun --hot src/index.ts).
 #
 # En producción: usar docker/api.Dockerfile (multi-stage con Bun).
+#
+# Soporte de proxy corporativo:
+#   docker compose build --build-arg HTTP_PROXY=http://proxy.onac.cu:8080 \
+#                                HTTPS_PROXY=http://proxy.onac.cu:8080 \
+#                                NO_PROXY=localhost,127.0.0.1,postgres,redis
+#   o vía .env (ver docker-compose.dev.yml `args:` ya configurados)
+
+# syntax=docker/dockerfile:1.6
 
 FROM node:26.8.2-bookworm-slim
 
-# Instalar bun runtime (para ejecutar la API Hono) y herramientas básicas
+# ===== ARGs de proxy (build-time) =====
+# Se pasan como ENV para que apt-get, pnpm y bun los respeten
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+ARG npm_config_registry
+ARG BUN_CONFIG_HTTP_PROXY
+
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY} \
+    http_proxy=${http_proxy} \
+    https_proxy=${https_proxy} \
+    no_proxy=${no_proxy} \
+    npm_config_registry=${npm_config_registry} \
+    BUN_CONFIG_HTTP_PROXY=${BUN_CONFIG_HTTP_PROXY}
+
+# ===== Instalación de paquetes del sistema con soporte de proxy =====
+# apt respeta automáticamente HTTP_PROXY/HTTPS_PROXY del entorno
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git \
       libssl-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL https://bun.sh/install | bash
+    && rm -rf /var/lib/apt/lists/*
+
+# ===== Instalar Bun runtime (para ejecutar la API Hono) =====
+# bun.sh/install respeta HTTP_PROXY/HTTPS_PROXY/BUN_CONFIG_HTTP_PROXY
+RUN curl -fsSL https://bun.sh/install | bash
 
 ENV BUN_INSTALL="/root/.bun"
 ENV PATH="${BUN_INSTALL}/bin:${PATH}"
 
-# Habilitar pnpm via corepack
+# ===== Habilitar pnpm via corepack =====
+# corepack respeta npm_config_registry (mirror npm local)
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
+
+# ===== Configuración de proxy para pnpm (en tiempo de instalación) =====
+# .npmrc se hereda del contexto de build si existe (ver repo root .npmrc)
+# Aquí forzamos los settings si están definidos via ARG/ENV
+RUN if [ -n "$npm_config_registry" ]; then \
+      pnpm config set registry "$npm_config_registry" --global; \
+    fi
 
 # El código se monta via bind-mount en docker-compose.dev.yml
 # Aquí solo pre-cargamos package.jsons para cache de instalación
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./ 
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 
 # Instalar dependencias raíz + paquetes
 # (se re-ejecuta en runtime con --frozen-lockfile si existe pnpm-lock.yaml)

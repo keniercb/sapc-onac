@@ -3,18 +3,51 @@
 # No compila, solo deja el código listo para `pnpm dev`.
 #
 # En producción: usar docker/web.Dockerfile (multi-stage con standalone output).
+#
+# Soporte de proxy corporativo:
+#   docker compose build --build-arg HTTP_PROXY=http://proxy.onac.cu:8080 \
+#                                HTTPS_PROXY=http://proxy.onac.cu:8080 \
+#                                NO_PROXY=localhost,127.0.0.1,postgres,redis
+#   o vía .env (ver docker-compose.dev.yml `args:` ya configurados)
+
+# syntax=docker/dockerfile:1.6
 
 FROM node:26.8.2-bookworm-slim
 
+# ===== ARGs de proxy (build-time) =====
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+ARG npm_config_registry
+ARG BUN_CONFIG_HTTP_PROXY
+
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY} \
+    http_proxy=${http_proxy} \
+    https_proxy=${https_proxy} \
+    no_proxy=${no_proxy} \
+    npm_config_registry=${npm_config_registry} \
+    BUN_CONFIG_HTTP_PROXY=${BUN_CONFIG_HTTP_PROXY}
+
+# ===== Instalación de paquetes del sistema con soporte de proxy =====
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git \
       libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Habilitar pnpm via corepack
+# ===== Habilitar pnpm via corepack =====
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
+
+# ===== Configuración de proxy para pnpm =====
+RUN if [ -n "$npm_config_registry" ]; then \
+      pnpm config set registry "$npm_config_registry" --global; \
+    fi
 
 # El código se monta via bind-mount en docker-compose.dev.yml
 # Aquí solo pre-cargamos package.jsons para cache de instalación

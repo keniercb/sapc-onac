@@ -221,6 +221,70 @@ Todos los puertos son configurables via `.env`:
 | Redis | `REDIS_PORT` | 6379 | Cache + colas BullMQ |
 | pgAdmin | (fijo) | 5050 | Solo con `--profile debug` |
 
+## Proxy corporativo (Cuba / intranet ONAC)
+
+Si el servidor está detrás de un proxy corporativo, las variables `HTTP_PROXY`/`HTTPS_PROXY` deben pasar tanto al **build** (para descargar dependencias npm/bun) como al **runtime** (para llamadas salientes del backend/frontend).
+
+### Configuración
+
+1. Edita `.env` (o `.env.production`) y descomenta las líneas de proxy:
+
+```bash
+HTTP_PROXY=http://proxy.onac.cu:8080
+HTTPS_PROXY=http://proxy.onac.cu:8080
+NO_PROXY=localhost,127.0.0.1,postgres,redis,api,web,*.onac.cu
+```
+
+2. Reconstruye las imágenes (las variables se pasan como build args):
+
+```bash
+make dev-build    # Linux/macOS
+make.cmd dev-build # Windows
+# o
+docker compose -f infra/docker/docker-compose.dev.yml --env-file .env build --no-cache
+```
+
+3. Levanta el stack normalmente:
+
+```bash
+make dev-up
+```
+
+### Cómo funciona
+
+- **Build-time**: las ARGs `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `http_proxy`, `https_proxy`, `no_proxy`, `npm_config_registry`, `BUN_CONFIG_HTTP_PROXY` se pasan a los Dockerfiles. Internamente se exportan como ENV para que:
+  - `apt-get update` respete el proxy
+  - `corepack` y `pnpm install` respeten el proxy
+  - `curl https://bun.sh/install` respete el proxy (Bun)
+  - Si se define `npm_config_registry`, pnpm usará ese registry (mirror local Verdaccio/Nexus)
+
+- **Runtime**: las variables `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY` (y minúsculas) se inyectan en el contenedor. Si el backend hace fetch saliente (p. ej. integración futura con sistemas externos), respetará el proxy. **Importante**: `NO_PROXY` incluye siempre `localhost,127.0.0.1,postgres,redis,api,web` para que la comunicación interna entre contenedores NO pase por el proxy.
+
+### Mirror npm local (Verdaccio/Nexus)
+
+Si tienes un mirror npm local (recomendado en Cuba para evitar latencia internacional):
+
+```bash
+# En .env:
+npm_config_registry=http://npm-mirror.onac.cu:4873
+```
+
+Esto hace que pnpm use el mirror tanto en build-time como en runtime (cuando se monta el código y se re-instalan deps).
+
+### Verificar que el proxy funciona
+
+```bash
+# Entrar al contenedor y probar conectividad
+make dev-sh-api
+# Dentro del contenedor:
+curl -v https://registry.npmjs.org/
+# Debe responder 200 (si el proxy está bien configurado)
+```
+
+### Sin proxy (red internacional directa)
+
+Si el servidor tiene acceso directo a internet (sin proxy), no necesitas hacer nada. Las variables `HTTP_PROXY`/`HTTPS_PROXY` quedan vacías por defecto y todo funciona normal.
+
 ## Troubleshooting
 
 ### Puerto ocupado
@@ -262,6 +326,57 @@ pnpm db:seed
   docker exec sapc-web-dev ls /app/apps/web/src
   ```
 - Si Docker corriendo via WSL2/VM, puede ser necesario `WATCHPACK_POLLING=true` (ya configurado).
+
+### pnpm install falla con error de red (timeout / ECONNREFUSED)
+
+Síntomas: `ERR_PNPM_FETCH_404`, `ETIMEDOUT`, `ECONNREFUSED registry.npmjs.org` durante `pnpm install` en el contenedor.
+
+Causas probables:
+1. **Sin proxy configurado en Cuba**: el contenedor no puede acceder a `registry.npmjs.org` directamente.
+2. **Proxy mal configurado**: las variables `HTTP_PROXY` no se pasan al contenedor.
+
+Solución:
+```bash
+# 1. Configurar proxy en .env
+echo 'HTTP_PROXY=http://proxy.onac.cu:8080' >> .env
+echo 'HTTPS_PROXY=http://proxy.onac.cu:8080' >> .env
+echo 'NO_PROXY=localhost,127.0.0.1,postgres,redis,api,web' >> .env
+
+# 2. Reconstruir imágenes con --no-cache para que tomen las ARGs nuevas
+make dev-build   # Linux/macOS
+make.cmd dev-build  # Windows
+
+# 3. Si el error persiste, usar mirror npm local
+echo 'npm_config_registry=http://npm-mirror.onac.cu:4873' >> .env
+make dev-build
+```
+
+### Bun install falla (curl https://bun.sh/install timeout)
+
+El instalador de Bun descarga binarios desde `bun.sh`. Detrás de un proxy, debe respetar `HTTP_PROXY`:
+
+```bash
+# En .env:
+HTTP_PROXY=http://proxy.onac.cu:8080
+HTTPS_PROXY=http://proxy.onac.cu:8080
+BUN_CONFIG_HTTP_PROXY=http://proxy.onac.cu:8080
+
+# Reconstruir con --no-cache
+make dev-build
+```
+
+Alternativa: si Bun no se puede instalar, usar pnpm + tsx para ejecutar el backend (cambiar `apps/api/package.json` script `dev` a `tsx watch src/index.ts`).
+
+### apt-get update falla en build (Cuba)
+
+```bash
+# Verificar que las ARGs de proxy se están pasando:
+docker compose -f infra/docker/docker-compose.dev.yml --env-file .env build --no-cache --progress=plain api 2>&1 | grep -E "HTTP_PROXY|ARG"
+
+# Debe mostrar las variables pobladas (no vacías)
+```
+
+Si están vacías, verifica que `.env` está en la raíz del repo y contiene las variables sin comentarios.
 
 ## Próximos pasos
 

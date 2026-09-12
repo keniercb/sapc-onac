@@ -89,6 +89,16 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api.dev
+      args:
+        # Proxy corporativo (build-time)
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+        no_proxy: ${NO_PROXY:-}
+        npm_config_registry: ${npm_config_registry:-}
+        BUN_CONFIG_HTTP_PROXY: ${BUN_CONFIG_HTTP_PROXY:-${HTTP_PROXY:-}}
     container_name: sapc-api-dev
     restart: unless-stopped
     depends_on:
@@ -104,8 +114,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_secret_change_in_prod}
       CORS_ORIGIN: http://localhost:3000
       TZ: America/Havana
-      # Watchdog: reinicia el proceso si crashea
       WATCHPACK_POLLING: "true"
+      # Proxy en runtime (para futuras llamadas salientes del backend)
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      # Mirror npm (si aplica)
+      npm_config_registry: ${npm_config_registry:-}
     volumes:
       # Bind-mount del código para hot reload
       - ../../apps/api:/app/apps/api
@@ -129,6 +147,16 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.web.dev
+      args:
+        # Proxy corporativo (build-time)
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+        no_proxy: ${NO_PROXY:-}
+        npm_config_registry: ${npm_config_registry:-}
+        BUN_CONFIG_HTTP_PROXY: ${BUN_CONFIG_HTTP_PROXY:-${HTTP_PROXY:-}}
     container_name: sapc-web-dev
     restart: unless-stopped
     depends_on:
@@ -140,6 +168,14 @@ services:
       WATCHPACK_POLLING: "true"
       # Next.js 16: habilita turbopack
       NEXT_TURBOPACK: "1"
+      # Proxy en runtime (p. ej. Next.js fetch saliente, server components)
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      no_proxy: localhost,127.0.0.1,postgres,redis,api,web,${NO_PROXY:-}
+      npm_config_registry: ${npm_config_registry:-}
     volumes:
       - ../../apps/web:/app/apps/web
       - ../../packages/shared:/app/packages/shared
