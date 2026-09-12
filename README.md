@@ -81,80 +81,62 @@ sapc-onac/
 
 - **Node.js 26.2.0 LTS** (pin estricto — ver `.nvmrc`)
 - **pnpm 9.15.0** (`npm install -g pnpm@9.15.0` — recomendado en Windows)
-- **Docker 24+** con Docker Compose v2 (para dev y prod con Docker)
-- **Bun 1.3+** (opcional — solo si quieres máximo rendimiento en el backend.
-  Sin Bun, el backend usa `tsx watch` que también tiene hot reload y funciona
-  en Windows sin instalación adicional. Ver `apps/api/package.json` script `dev`.)
+- **Docker 24+** con Docker Compose v2 (para dev y prod)
+- **Bun 1.3+** (opcional — solo para máximo rendimiento en el backend;
+  sin Bun, el backend usa `tsx watch` que también tiene hot reload)
 
 > **Windows sin Bun**: si `pnpm dev:api` falla con `"bun" no se reconoce como
 > un comando`, ya está resuelto. El script `dev` ahora usa `tsx watch` (Node.js
 > nativo). Bun es opcional: solo se usa en Docker/prod para mejor performance.
 
-### Opción A — Desarrollo local híbrido (RECOMENDADO)
+### Opción A — Desarrollo con Docker (RECOMENDADO, 100% en contenedores)
 
-PostgreSQL + Redis en Docker, API + Web en el host con `pnpm dev`. Da **hot reload instantáneo** sin overhead de Docker para el código.
+Stack completo en Docker: PostgreSQL 16 + Redis 7 + API + Web, todos en contenedores con hot reload. Mirror fiel del entorno de producción.
 
 ```bash
 # 1. Setup inicial (solo primera vez)
-cp .env.local.example .env.local
+cp .env.example .env
 pnpm install
 
-# 2. Levantar PostgreSQL + Redis en Docker
+# 2. Levantar el stack completo (postgres + redis + api + web)
 # Linux/macOS:
-make local-up
+make dev-up
 # Windows:
-make.cmd local-up
+make.cmd dev-up
 # Alternativa multiplataforma:
-pnpm docker:local:up
-# → postgres (5432), redis (6379)
+pnpm docker:dev:up
+# → postgres (5432), redis (6379), api (4000), web (3000)
 
-# 3. Preparar base de datos (solo la primera vez o tras cambio de schema)
-pnpm db:generate    # genera PrismaClient
-pnpm db:push        # crea tablas
-pnpm db:seed        # carga nomencladores + datos demo
+# 3. Preparar base de datos (solo la primera vez)
+# El contenedor api ejecuta automáticamente db:generate y db:push al iniciar
+# Para reseed manual:
+make dev-reset-db      # Linux/macOS
+make.cmd dev-reset-db   # Windows
 
-# 4. Levantar API y Web en terminales separadas
-pnpm dev:api        # backend en :4000 (terminal 1)
-pnpm dev:web        # frontend en :3000 (terminal 2)
-
-# 5. Acceder
+# 4. Acceder
 # Web:  http://localhost:3000
 # API:  http://localhost:4000/health
 ```
 
-**Ventajas sobre full Docker:**
-- ✅ Hot reload instantáneo (sin polling de Docker filesystem)
-- ✅ Sin problemas de permisos de Windows/WSL2
-- ✅ Prisma generate en el host (sin volúmenes complejos)
-- ✅ Debugging con breakpoints directo en VS Code / WebStorm
-- ✅ Misma BD que prod (PostgreSQL 16 + Redis 7)
+**Ventajas:**
+- ✅ 100% Docker — no requiere Node.js/pnpm instalados en el host
+- ✅ Mirror fiel de producción (mismas imágenes, misma BD)
+- ✅ Hot reload via bind-mounts (cambios en código se reflejan al instante)
+- ✅ Sin conflictos de versiones entre desarrolladores
+- ✅ Aislamiento total del entorno del host
 
 **Comandos útiles:**
 ```bash
-make local-logs        # ver logs de postgres + redis
-make local-psql         # abrir psql
-make local-down         # detener servicios
-make local-debug        # levantar con pgadmin en :5050
-```
-
-### Opción B — Desarrollo full Docker (todo en contenedores)
-
-Stack completo en Docker con hot reload via bind-mounts (más lento en Windows).
-
-```bash
-# 1. Setup inicial
-cp .env.example .env
-pnpm install
-
-# 2. Levantar el stack completo
-make dev-up          # Linux/macOS
-make.cmd dev-up      # Windows
-pnpm docker:dev:up  # alternativa multiplataforma
-# → postgres (5432), redis (6379), api (4000), web (3000)
-
-# 3. Preparar base de datos
-pnpm db:push
-pnpm db:seed
+# Linux/macOS                   | Windows (CMD/PowerShell)
+make dev-logs                    | make.cmd dev-logs                # seguir logs
+make dev-down                    | make.cmd dev-down                # detener
+make dev-psql                    | make.cmd dev-psql                # abrir psql
+make dev-redis-cli               | make.cmd dev-redis-cli           # abrir redis-cli
+make dev-sh-web                  | make.cmd dev-sh-web              # shell en web
+make dev-sh-api                  | make.cmd dev-sh-api              # shell en api
+make dev-build                   | make.cmd dev-build               # reconstruir imágenes
+make dev-reset-db                | make.cmd dev-reset-db            # reset BD + reseed
+make dev-debug                   | make.cmd dev-debug               # con pgadmin (:5050)
 ```
 
 > **¿Error `Environment variable not found: DATABASE_URL`?**
@@ -165,15 +147,43 @@ pnpm db:seed
 > cp apps/api/.env.example apps/api/.env
 > ```
 
-Comandos útiles (Linux/macOS usa `make`, Windows usa `make.cmd` o `pnpm docker:dev:*`):
+### Opción B — Desarrollo local híbrido (BD en Docker, código en host)
+
+PostgreSQL + Redis en Docker, API + Web en el host con `pnpm dev`. Hot reload instantáneo sin overhead de Docker para el código.
+
 ```bash
-# Linux/macOS                   | Windows (CMD/PowerShell)        | Alternativa pnpm
-make dev-logs                    | make.cmd dev-logs                | pnpm docker:dev:logs
-make dev-down                    | make.cmd dev-down                | pnpm docker:dev:down
-make dev-psql                    | make.cmd dev-psql                | (no equivale en pnpm)
-make dev-reset-db                | make.cmd dev-reset-db            | (no equivale en pnpm)
-make dev-debug                   | make.cmd dev-debug               | (no equivale en pnpm)
-make help                        | make.cmd help                    | (ver Makefile o make.cmd)
+# 1. Setup inicial
+cp .env.local.example .env.local
+pnpm install
+
+# 2. Levantar solo PostgreSQL + Redis en Docker
+make local-up        # Linux/macOS
+make.cmd local-up    # Windows
+pnpm docker:local:up # alternativa
+# → postgres (5432), redis (6379)
+
+# 3. Preparar base de datos
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+
+# 4. Levantar API y Web en terminales separadas
+pnpm dev:api         # backend en :4000 (terminal 1)
+pnpm dev:web         # frontend en :3000 (terminal 2)
+```
+
+**Ventajas sobre full Docker:**
+- ✅ Hot reload instantáneo (sin polling de Docker filesystem)
+- ✅ Sin problemas de permisos de Windows/WSL2
+- ✅ Debugging con breakpoints directo en VS Code / WebStorm
+- ✅ Misma BD que prod (PostgreSQL 16 + Redis 7)
+
+**Comandos útiles:**
+```bash
+make local-logs       # ver logs de postgres + redis
+make local-psql        # abrir psql
+make local-down        # detener servicios
+make local-debug       # levantar con pgadmin en :5050
 ```
 
 ### Opción C — Desarrollo local sin Docker (sandbox SQLite)

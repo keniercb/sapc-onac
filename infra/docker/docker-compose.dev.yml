@@ -128,16 +128,20 @@ services:
       # Bind-mount del código para hot reload
       - ../../apps/api:/app/apps/api
       - ../../packages/shared:/app/packages/shared
-      # Persistencia de node_modules (no se sobreescribe)
+      # Persistencia de node_modules (no se sobreescribe con bind-mount)
       - api_dev_node_modules:/app/apps/api/node_modules
       # Persistencia de .prisma/client generado por prisma generate
-      - api_dev_prisma:/app/apps/api/node_modules/.prisma
+      # (output = ../../../node_modules/.prisma/client desde apps/api/prisma/)
+      - api_dev_prisma:/app/node_modules/.prisma
+      - api_dev_prisma_client:/app/node_modules/@prisma/client
     ports:
       - "${API_PORT:-4000}:4000"
     command: >
-      sh -c "cd /app/apps/api &&
-             pnpm install --frozen-lockfile &&
+      sh -c "cd /app &&
+             pnpm install --no-frozen-lockfile &&
+             cd /app/apps/api &&
              pnpm db:generate &&
+             (pnpm db:push --accept-data-loss || echo 'db:push skipped') &&
              pnpm dev"
     networks:
       - sapc-dev-net
@@ -181,11 +185,14 @@ services:
       - ../../packages/shared:/app/packages/shared
       - web_dev_node_modules:/app/apps/web/node_modules
       - web_dev_next:/app/apps/web/.next
+      # Necesario para que Next.js encuentre @prisma/client compartido desde el api
+      - api_dev_prisma:/app/node_modules/.prisma
     ports:
       - "${WEB_PORT:-3000}:3000"
     command: >
-      sh -c "cd /app/apps/web &&
-             pnpm install --frozen-lockfile &&
+      sh -c "cd /app &&
+             pnpm install --no-frozen-lockfile &&
+             cd /app/apps/web &&
              pnpm dev"
     networks:
       - sapc-dev-net
@@ -200,5 +207,6 @@ volumes:
   pgadmin_dev_data:
   api_dev_node_modules:
   api_dev_prisma:
+  api_dev_prisma_client:
   web_dev_node_modules:
   web_dev_next:

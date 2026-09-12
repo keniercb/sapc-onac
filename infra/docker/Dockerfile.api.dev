@@ -65,19 +65,18 @@ RUN if [ -n "$npm_config_registry" ]; then \
     fi
 
 # El código se monta via bind-mount en docker-compose.dev.yml
-# Aquí solo pre-cargamos package.jsons + schema.prisma para cache de instalación
+# Aquí solo pre-cargamos package.jsons + schema.prisma + .npmrc para cache
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/api/prisma/schema.prisma ./apps/api/prisma/schema.prisma
 COPY packages/shared/package.json ./packages/shared/package.json
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY package.json pnpm-workspace.yaml .npmrc pnpm-lock.yaml* ./
 
 # Instalar dependencias raíz + paquetes
-# (se re-ejecuta en runtime con --frozen-lockfile si existe pnpm-lock.yaml)
+# Se usa --no-frozen-lockfile porque el lockfile puede no existir aún
 RUN pnpm install --no-frozen-lockfile || true
 
-# Generar PrismaClient (necesario para que apps/api pueda importar @prisma/client)
-# El bind-mount de docker-compose.dev.yml sobreescribe apps/api/, pero
-# node_modules se mantiene por el volumen `api_dev_node_modules`
+# Generar PrismaClient (output a /app/node_modules/.prisma/client)
+# Esto se vuelve a ejecutar en runtime porque el bind-mount sobreescribe apps/api/
 RUN cd /app/apps/api && pnpm db:generate || echo "Prisma generate deferred to runtime"
 
 EXPOSE 4000
