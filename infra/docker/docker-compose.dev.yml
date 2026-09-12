@@ -130,14 +130,14 @@ services:
       - ../../packages/shared:/app/packages/shared
       # Persistencia de node_modules (no se sobreescribe)
       - api_dev_node_modules:/app/apps/api/node_modules
-      # Compartir PrismaClient generado con el web
-      - ../../apps/web/prisma:/app/apps/web/prisma
-      - prisma_generated:/app/apps/web/node_modules/.prisma
+      # Persistencia de .prisma/client generado por prisma generate
+      - api_dev_prisma:/app/apps/api/node_modules/.prisma
     ports:
       - "${API_PORT:-4000}:4000"
     command: >
       sh -c "cd /app/apps/api &&
              pnpm install --frozen-lockfile &&
+             pnpm db:generate &&
              pnpm dev"
     networks:
       - sapc-dev-net
@@ -181,8 +181,6 @@ services:
       - ../../packages/shared:/app/packages/shared
       - web_dev_node_modules:/app/apps/web/node_modules
       - web_dev_next:/app/apps/web/.next
-      # Compartir schema Prisma (web es el dueño del schema)
-      - prisma_shared:/app/prisma-shared
     ports:
       - "${WEB_PORT:-3000}:3000"
     command: >
@@ -201,7 +199,6 @@ volumes:
   redis_dev_data:
   pgadmin_dev_data:
   api_dev_node_modules:
+  api_dev_prisma:
   web_dev_node_modules:
   web_dev_next:
-  prisma_generated:
-  prisma_shared:

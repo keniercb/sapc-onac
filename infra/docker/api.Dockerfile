@@ -54,6 +54,9 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Generar PrismaClient (necesario para que el backend pueda importar @prisma/client)
+COPY prisma/schema.prisma ./prisma/schema.prisma
+RUN bunx prisma generate
 # Build (si se requiere transpilar TS a JS)
 RUN bun build src/index.ts --target bun --outfile dist/index.js
 
@@ -65,5 +68,7 @@ ENV NODE_ENV=production
 ENV PORT=4000
 COPY --from=builder /app/dist/index.js ./index.js
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 EXPOSE 4000
 CMD ["bun", "index.js"]

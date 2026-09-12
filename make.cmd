@@ -117,7 +117,7 @@ goto :eof
 :dev_reset_db
 echo ATENCION: Esto borrara TODA la BD de desarrollo. Continuar? (Ctrl+C para cancelar^)
 pause
-%DC% %ENV_FLAG% exec api sh -c "cd /app/apps/web && pnpm db:push --force-reset && pnpm db:seed"
+%DC% %ENV_FLAG% exec api sh -c "cd /app/apps/api && pnpm db:push --force-reset && pnpm db:seed"
 echo ✓ BD reseteada y reseed aplicado
 goto :eof
 

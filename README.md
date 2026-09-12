@@ -120,15 +120,11 @@ pnpm db:seed
 ```
 
 > **¿Error `Environment variable not found: DATABASE_URL`?**
-> Prisma busca `.env` en el directorio donde se ejecuta el comando (`apps/web/`).
 > Los scripts `pnpm db:push`, `pnpm db:seed`, etc. ya cargan el `.env` raíz
-> automáticamente via `dotenv-cli`. Si el error persiste:
+> automáticamente via `dotenv-cli` (en `apps/api/package.json`).
+> Si el error persiste, crea `apps/api/.env` con DATABASE_URL:
 > ```bash
-> # Opción A: crea apps/web/.env con DATABASE_URL (ver apps/web/.env.example)
-> cp apps/web/.env.example apps/web/.env
->
-> # Opción B: ejecuta desde apps/web con el .env raíz
-> cd apps/web && pnpm db:push
+> cp apps/api/.env.example apps/api/.env
 > ```
 
 Comandos útiles (Linux/macOS usa `make`, Windows usa `make.cmd` o `pnpm docker:dev:*`):
@@ -268,6 +264,27 @@ export const api = {
 ✅ Módulo de Citas y Atenciones (RF-CIT-01, 02)
 ✅ Ficha detallada del pensionado con drawer lateral (RF-PEN-02)
 ✅ Exportación CSV de pensionados (RF-REP-02)
+
+## Arquitectura de Prisma
+
+> **Importante**: El `schema.prisma` vive en **`apps/api/prisma/`** (no en `apps/web`).
+> El backend es dueño de la base de datos y la genera con `prisma generate`.
+> El frontend solo consume la API REST, no accede directamente a la BD.
+
+```
+apps/api/prisma/
+├── schema.prisma   # 30 modelos Prisma (PostgreSQL provider)
+└── seed.ts         # Carga nomencladores + datos demo
+```
+
+Comandos Prisma (ejecutar desde la raíz del monorepo):
+```bash
+pnpm db:push       # Crea/actualiza tablas en la BD
+pnpm db:seed        # Carga datos demo (nomencladores, pensionados, citas)
+pnpm db:studio      # Abre Prisma Studio (GUI para explorar datos)
+pnpm db:migrate     # Crea migración versionada
+pnpm db:generate    # Regenera el PrismaClient tras cambio de schema
+```
 
 ## Equivalencia Dev vs Prod
 
