@@ -83,7 +83,7 @@ services:
       - sapc-dev-net
 
   # ===== Backend API (desarrollo con hot reload) =====
-  # Imagen: node:26.8.2-bookworm-slim con pnpm 9 + tsx para hot reload
+  # Imagen: node:26.2.0-bookworm-slim con pnpm 9 + tsx para hot reload
   # Monta el código fuente para que los cambios se reflejen sin rebuild
   api:
     build:

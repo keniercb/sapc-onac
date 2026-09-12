@@ -28,7 +28,7 @@ Despliegue **dev** (desarrollo con hot reload) y **prod** (on-premise Cuba), amb
 
 ## Requisitos previos
 
-- **Node.js 26.8.2 LTS** (pin estricto — ver `.nvmrc`)
+- **Node.js 26.2.0 LTS** (pin estricto — ver `.nvmrc`)
 - **pnpm 9.15.0** (habilitado via corepack)
 - **Docker 24+** y **Docker Compose v2+** (con WSL2 en Windows)
 - **Bun 1.3+** (para ejecutar el backend Hono en dev y prod)
@@ -174,7 +174,7 @@ Levanta 4 contenedores:
 - Sin turbopack/hot reload: build standalone optimizado
 - Sin pgadmin ni herramientas de debug
 - Restart: unless-stopped + healthchecks estrictos
-- Imágenes basadas en `node:26.8.2-bookworm-slim` (multistage)
+- Imágenes basadas en `node:26.2.0-bookworm-slim` (multistage)
 
 ### Backups
 
@@ -200,10 +200,10 @@ Cada contenedor expone un endpoint de health:
 infra/docker/
 ├── docker-compose.yml              # PROD: PostgreSQL + Redis + API + Web
 ├── docker-compose.dev.yml          # DEV:  PostgreSQL + Redis + API + Web (con hot reload)
-├── Dockerfile.api.dev              # DEV:  Node 26.8.2 + Bun + pnpm (bind-mount)
-├── Dockerfile.web.dev              # DEV:  Node 26.8.2 + pnpm (bind-mount)
+├── Dockerfile.api.dev              # DEV:  Node 26.2.0 + Bun + pnpm (bind-mount)
+├── Dockerfile.web.dev              # DEV:  Node 26.2.0 + pnpm (bind-mount)
 ├── api.Dockerfile                  # PROD: multi-stage Bun
-├── web.Dockerfile                  # PROD: multi-stage Node.js 26.8.2 standalone
+├── web.Dockerfile                  # PROD: multi-stage Node.js 26.2.0 standalone
 ├── postgres/
 │   └── init.sql                    # Extensiones uuid-ossp, pgcrypto, timezone
 └── README.md                       # Este archivo

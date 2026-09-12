@@ -30,7 +30,7 @@ La selección del stack atiende tres restricciones clave del contexto ONAC: (1) 
 
 | Componente | Tecnología | Versión | Justificación |
 |---|---|---|---|
-| Runtime Frontend (build) | **Node.js** | 26.8.2 LTS | Mismo runtime que backend para homogeneidad del monorepo. |
+| Runtime Frontend (build) | **Node.js** | 26.2.0 LTS | Mismo runtime que backend para homogeneidad del monorepo. |
 | Framework UI | **Next.js** (App Router) | 14.x | SSR/SSG híbrido, routing por filesystem, RSC. |
 | Lenguaje | **TypeScript** | 5.x | Tipado estático, compartible con backend. |
 | Librería UI | **React** | 18.x | Base del ecosistema. |
@@ -51,7 +51,7 @@ La selección del stack atiende tres restricciones clave del contexto ONAC: (1) 
 
 | Componente | Tecnología | Versión | Justificación |
 |---|---|---|---|
-| Runtime | **Node.js** | 26.8.2 LTS | Versión requerida por el cliente; soporte extendido, performance estable. |
+| Runtime | **Node.js** | 26.2.0 LTS | Versión requerida por el cliente; soporte extendido, performance estable. |
 | Framework | **NestJS** | 10.x | Arquitectura opinionada, modular, DI nativa. |
 | Lenguaje | **TypeScript** | 5.x | Compartido con frontend. |
 | ORM | **Prisma** | 5.x | Migraciones versionadas, tipado generado, schema declarativo. |
@@ -80,11 +80,11 @@ La selección del stack atiende tres restricciones clave del contexto ONAC: (1) 
 
 ### 2.3 Versiones de Soporte a Largo Plazo (LTS)
 
-- **Node.js 26.8.2 LTS** (versión requerida por el cliente). Pin en `.nvmrc` y en `Dockerfile` base. Mantener dentro del ciclo de parches de la rama 26.x.
+- **Node.js 26.2.0 LTS** (versión requerida por el cliente). Pin en `.nvmrc` y en `Dockerfile` base. Mantener dentro del ciclo de parches de la rama 26.x.
 - PostgreSQL 16 hasta noviembre 2028.
 - Next.js 14 (estable) → evaluación de Next.js 15 LTS cuando se estabilice.
 
-> **Pin estricto de Node.js 26.8.2:** el archivo `.nvmrc` debe contener exactamente `26.8.2` (no `26` ni `lts/*`), y la imagen base Docker debe ser `node:26.8.2-bookworm-slim` (o `alpine` si se prefiere menor tamaño). Cualquier actualización de parche requiere validación explícita del equipo de arquitectura y debe quedar registrada como ADR.
+> **Pin estricto de Node.js 26.2.0:** el archivo `.nvmrc` debe contener exactamente `26.2.0` (no `26` ni `lts/*`), y la imagen base Docker debe ser `node:26.2.0-bookworm-slim` (o `alpine` si se prefiere menor tamaño). Cualquier actualización de parche requiere validación explícita del equipo de arquitectura y debe quedar registrada como ADR.
 
 ---
 
@@ -313,7 +313,7 @@ packages:
   },
   "packageManager": "pnpm@9.x",
   "engines": {
-    "node": "26.8.2",
+    "node": "26.2.0",
     "pnpm": "9.x"
   }
 }
@@ -1158,7 +1158,7 @@ Se añaden los siguientes requisitos funcionales al documento de requisitos:
 ### 6.2 Pipeline CI (en cada push a `feature/*` o `bugfix/*`)
 
 1. Checkout del código.
-2. Setup **Node.js 26.8.2** exacto (validar versión antes de continuar el pipeline).
+2. Setup **Node.js 26.2.0** exacto (validar versión antes de continuar el pipeline).
 3. Setup pnpm 9.
 4. Instalación de dependencias (con cache pnpm).
 5. `pnpm lint` (todos los paquetes).
@@ -1214,7 +1214,7 @@ Se añaden los siguientes requisitos funcionales al documento de requisitos:
 
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
-| Baja conectividad internacional (npm/Docker Hub) | Alta | Alto | Mirror local de npm (Verdaccio/Proxy Nexus) y registry Docker interno; precarga de imágenes base. Pin estricto de Node.js 26.8.2 pre-cacheado en el runner. |
+| Baja conectividad internacional (npm/Docker Hub) | Alta | Alto | Mirror local de npm (Verdaccio/Proxy Nexus) y registry Docker interno; precarga de imágenes base. Pin estricto de Node.js 26.2.0 pre-cacheado en el runner. |
 | Cambios de requisitos en nomencladores durante el desarrollo | Alta | Medio | Versionado de nomencladores (RF-NOM-03) y proceso formal de gestión de cambios. |
 | Resistencia al cambio por parte de operarios | Media | Alto | Capacitación temprana, diseño UX enfocado en usabilidad, soporte hipercautivo las primeras semanas. |
 | Pérdida de datos históricos en migración desde Excel | Media | Crítico | Auditoría de muestra, doble corrida en paralelo, plan de rollback. |

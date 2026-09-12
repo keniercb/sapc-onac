@@ -1,5 +1,5 @@
 # SAPC-ONAC API — Dockerfile de DESARROLLO
-# Imagen Node.js 26.8.2 con pnpm 9 para hot reload.
+# Imagen Node.js 26.2.0 con pnpm 9 para hot reload.
 # No compila, solo deja el código listo para `pnpm dev` (bun --hot src/index.ts).
 #
 # En producción: usar docker/api.Dockerfile (multi-stage con Bun).
@@ -12,7 +12,7 @@
 
 # syntax=docker/dockerfile:1.6
 
-FROM node:26.8.2-bookworm-slim
+FROM node:26.2.0-bookworm-slim
 
 # ===== ARGs de proxy (build-time) =====
 # Se pasan como ENV para que apt-get, pnpm y bun los respeten

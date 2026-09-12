@@ -8,7 +8,7 @@
 # syntax=docker/dockerfile:1.6
 
 # ===== Stage 1: deps =====
-FROM node:26.8.2-bookworm-slim AS deps
+FROM node:26.2.0-bookworm-slim AS deps
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -36,7 +36,7 @@ RUN \
   else echo "No lockfile found" && exit 1; fi
 
 # ===== Stage 2: builder =====
-FROM node:26.8.2-bookworm-slim AS builder
+FROM node:26.2.0-bookworm-slim AS builder
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
@@ -60,7 +60,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build
 
 # ===== Stage 3: runner (sin proxy vars — no necesita internet) =====
-FROM node:26.8.2-bookworm-slim AS runner
+FROM node:26.2.0-bookworm-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production

@@ -1,5 +1,5 @@
 # SAPC-ONAC Web (Next.js 16) — Dockerfile de DESARROLLO
-# Imagen Node.js 26.8.2 con pnpm 9 para hot reload (turbopack).
+# Imagen Node.js 26.2.0 con pnpm 9 para hot reload (turbopack).
 # No compila, solo deja el código listo para `pnpm dev`.
 #
 # En producción: usar docker/web.Dockerfile (multi-stage con standalone output).
@@ -12,7 +12,7 @@
 
 # syntax=docker/dockerfile:1.6
 
-FROM node:26.8.2-bookworm-slim
+FROM node:26.2.0-bookworm-slim
 
 # ===== ARGs de proxy (build-time) =====
 ARG HTTP_PROXY

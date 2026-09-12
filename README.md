@@ -3,7 +3,7 @@
 > **Proyecto:** Plataforma de gestión integral para la Oficina Nacional de Atención a Combatientes (ONAC), Cuba.
 > **Versión actual:** 0.3.0 — Fase 1 (Monorepo + Backend separado)
 > **Fecha:** 2026-09-12
-> **Stack:** Node.js 26.8.2 LTS · Next.js 16 · Hono/NestJS · Prisma · PostgreSQL 16 · Turborepo
+> **Stack:** Node.js 26.2.0 LTS · Next.js 16 · Hono/NestJS · Prisma · PostgreSQL 16 · Turborepo
 
 ## Estado del Proyecto
 
@@ -61,7 +61,7 @@ sapc-onac/
 └── docker/
     ├── docker-compose.yml          # PostgreSQL + Redis + API + Web
     ├── api.Dockerfile              # Multi-stage Bun
-    ├── web.Dockerfile              # Multi-stage Node.js 26.8.2
+    ├── web.Dockerfile              # Multi-stage Node.js 26.2.0
     └── postgres/init.sql
 ├── 01-requisitos-funcionales.md    # 42 RF en 10 módulos
 ├── 02-plan-desarrollo.md           # Plan en 5 fases
@@ -71,7 +71,7 @@ sapc-onac/
 ├── pnpm-workspace.yaml             # Workspace config
 ├── package.json                    # Raíz monorepo
 ├── tsconfig.base.json              # TS config base
-├── .nvmrc                          # Node.js 26.8.2 pin
+├── .nvmrc                          # Node.js 26.2.0 pin
 └── README.md
 ```
 
@@ -79,7 +79,7 @@ sapc-onac/
 
 ### Requisitos previos
 
-- **Node.js 26.8.2 LTS** (pin estricto — ver `.nvmrc`)
+- **Node.js 26.2.0 LTS** (pin estricto — ver `.nvmrc`)
 - **pnpm 9.15.0** (`npm install -g pnpm@9.15.0` — recomendado en Windows)
 - **Docker 24+** con Docker Compose v2 (para dev y prod con Docker)
 - **Bun 1.3+** (opcional — solo si quieres máximo rendimiento en el backend.
@@ -247,7 +247,7 @@ export const api = {
 - **Contenedores:** Docker + Docker Compose
 - **BD Producción:** PostgreSQL 16-bookworm
 - **Cache/Colas:** Redis 7-alpine (para BullMQ en Fase 2)
-- **Pin Node.js:** 26.8.2 LTS estricto (`.nvmrc` + `engines`)
+- **Pin Node.js:** 26.2.0 LTS estricto (`.nvmrc` + `engines`)
 
 ## Verificación Fase 1 (sandbox)
 
@@ -312,7 +312,7 @@ Esto garantiza que lo que funciona en dev funcionará en prod sin sorpresas. Par
 2. Implementar **SSE** para notificaciones en tiempo real
 3. Añadir módulos: Citas, Necesidades, Fallecimiento
 4. Implementar **BullMQ + Redis** para colas (importación masiva, reportes)
-5. Configurar **GitHub Actions** CI con Node.js 26.8.2 LTS
+5. Configurar **GitHub Actions** CI con Node.js 26.2.0 LTS
 6. Migrar Hono → NestJS 10 real (estructura idéntica, fácil migración)
 7. Migrar SQLite → PostgreSQL 16 (solo cambiar `provider` en `schema.prisma`)
 
